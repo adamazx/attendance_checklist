@@ -4,3 +4,7 @@
 CLAUDE.local.md
 .env
 .env.local
+
+# Python cache
+__pycache__/
+*.pyc
