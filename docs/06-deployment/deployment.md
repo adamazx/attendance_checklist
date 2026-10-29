@@ -5,7 +5,15 @@
 ## Hosting
 
 - **Vercel** — โฮสต์ Next.js + Payload 3 ร่วมกันในแอปเดียว
-- **Neon** — Postgres database (serverless)
+- **Neon** — Postgres database (serverless) สำหรับ production
+
+## Local development (การพัฒนาบนเครื่อง)
+
+- ใช้ **Docker Postgres** (`postgres:16-alpine`) ผ่าน `docker-compose.yml` ที่ repo root
+- ลำดับการเริ่ม: `docker compose up -d` **ก่อน** `pnpm dev`
+- `DATABASE_URI` สำหรับ local: `postgres://attendance:attendance@localhost:5432/attendance_dev`
+
+> **หมายเหตุ:** Docker Postgres ใช้สำหรับ local-dev เท่านั้น — production บน Vercel ต้องใช้ managed Postgres (Neon). การขึ้น production ให้เปลี่ยนค่า `DATABASE_URI` เป็น Neon **pooled** connection string เท่านั้น ไม่ต้องแก้โค้ดอื่น
 
 ## Setup steps (ขั้นตอนการตั้งค่า)
 
@@ -19,12 +27,12 @@
 
 | Variable | หน้าที่ |
 |----------|---------|
-| `DATABASE_URL` | Neon Postgres connection string |
+| `DATABASE_URI` | Postgres connection string (local Docker / prod = Neon pooled) |
 | `PAYLOAD_SECRET` | คีย์ลับสำหรับ Payload auth/encryption |
 | `NEXT_PUBLIC_SERVER_URL` | URL ของแอปที่ deploy |
 | *(เพิ่มเติมตามต้องการ)* | เช่น SMTP, LINE OA token (Phase 2) |
 
-> ค่าจริงของ env vars เป็น stub — กำหนดตอนตั้งค่า Vercel/Neon
+> ค่าจริงเก็บใน `.env` (gitignored) เท่านั้น — ดูรูปแบบที่ `.env.example`. บน Vercel ให้ตั้ง env vars เดียวกันในโปรเจกต์
 
 ## Academic-year config (การกำหนดค่าปีการศึกษา)
 

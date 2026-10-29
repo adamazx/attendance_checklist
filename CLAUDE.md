@@ -28,12 +28,16 @@ Project memory for Claude Code. Keep concise. Modular rules live in `.claude/rul
 
 ## Commands
 
-> TODO: fill real scripts once `package.json` exists.
+Package manager is **pnpm**. Start the local Postgres container **before** `pnpm dev`.
 
-- `npm run dev` — start dev server *(TODO: confirm)*
-- `npm run build` — production build *(TODO: confirm)*
-- `npm run lint` — lint *(TODO: confirm)*
-- Payload generate-types — e.g. `npm run payload generate:types` *(TODO: confirm)*
+- `docker compose up -d` — start local Docker Postgres (dev DB); run this first
+- `pnpm dev` — start Next.js + Payload dev server (http://localhost:3000, admin at `/admin`)
+- `pnpm build` — production build
+- `pnpm start` — run the production build
+- `pnpm lint` — ESLint
+- `pnpm generate:types` — regenerate `src/payload-types.ts` (run after collection changes)
+- `pnpm generate:importmap` — regenerate the admin import map
+- `pnpm payload` — Payload CLI (migrations, etc.)
 
 ## Conventions
 
@@ -50,4 +54,4 @@ Red–gold brand chrome with functional action-button colors (มา/สาย/�
 ## Do not
 
 - Edit files under `docs/` without being asked (another workstream owns it; read for reference only).
-- Commit secrets. `DATABASE_URL` and `PAYLOAD_SECRET` belong in `.env` (gitignored).
+- Commit secrets. `DATABASE_URI` and `PAYLOAD_SECRET` belong in `.env` (gitignored); see `.env.example`.

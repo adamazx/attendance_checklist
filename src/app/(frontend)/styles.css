@@ -1,0 +1,127 @@
+@import 'tailwindcss';
+
+/* Red–gold brand theme tokens (source of truth: docs/04-design/design-system.md).
+   Define once as CSS variables; never hardcode colors in components. */
+:root {
+  --brand-red: #9e1b1e;
+  --brand-red-dark: #7a1114;
+  --brand-gold: #d4af37;
+  --bg-cream: #fbf4e4;
+  --text-ink: #2b2b2b;
+
+  /* Functional action-button colors (มา / สาย / ลา / ขาด, logout, etc.) */
+  --action-amber: #f5a800;
+  --action-blue: #1f6feb;
+  --action-green: #1e8e4e;
+  --action-danger: #d23442;
+}
+
+/* Expose the brand tokens to Tailwind v4 utilities (bg-brand-red, text-ink, …). */
+@theme inline {
+  --color-brand-red: var(--brand-red);
+  --color-brand-red-dark: var(--brand-red-dark);
+  --color-brand-gold: var(--brand-gold);
+  --color-bg-cream: var(--bg-cream);
+  --color-text-ink: var(--text-ink);
+  --color-action-amber: var(--action-amber);
+  --color-action-blue: var(--action-blue);
+  --color-action-green: var(--action-green);
+  --color-action-danger: var(--action-danger);
+  --font-sans: var(--font-sarabun), system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-cream);
+  color: var(--text-ink);
+  font-family: var(--font-sarabun), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: currentColor;
+}
+
+/* Default home page — theme baseline preview only (replaced by the real dashboard later). */
+.home {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 100vh;
+  padding: 45px;
+  max-width: 1024px;
+  margin: 0 auto;
+}
+
+.home .content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+  gap: 10px;
+  text-align: center;
+}
+
+.home h1 {
+  margin: 24px 0;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 700;
+  color: var(--brand-red);
+}
+
+.home .links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.home .links a {
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.home .links .admin {
+  color: #fff;
+  background: var(--brand-red);
+  border: 1px solid var(--brand-gold);
+}
+
+.home .links .docs {
+  color: var(--brand-red-dark);
+  background: transparent;
+  border: 1px solid var(--brand-gold);
+}
+
+.home .footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--brand-red-dark);
+}
+
+.home .footer .codeLink {
+  text-decoration: none;
+  padding: 0 0.4rem;
+  background: rgb(212 175 55 / 0.25);
+  border-radius: 4px;
+}
