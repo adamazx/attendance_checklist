@@ -1,4 +1,6 @@
-# Claude
-.claude/**
+# Claude — track shared config, ignore personal/local files
 .claude/settings.local.json
 .claude/**/*.local.*
+CLAUDE.local.md
+.env
+.env.local
