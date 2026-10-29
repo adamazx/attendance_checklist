@@ -6,6 +6,10 @@ import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
+import { AcademicYear } from './collections/AcademicYear'
+import { Classroom } from './collections/Classroom'
+import { Student } from './collections/Student'
+import { Term } from './collections/Term'
 import { Users } from './collections/Users'
 
 const filename = fileURLToPath(import.meta.url)
@@ -18,10 +22,10 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  // Phase 0: only the default Users collection. Business collections
-  // (AcademicYear, Term, Classroom, Teacher, Student, AttendanceRecord, AuditLog)
-  // are added in later phases.
-  collections: [Users],
+  // Phase 1: master-data collections. Teacher is modeled as fields on Users
+  // (role + advisor assignment via Classroom.advisors). AttendanceRecord and
+  // AuditLog are added in Phase 2.
+  collections: [Users, AcademicYear, Term, Classroom, Student],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
