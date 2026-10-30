@@ -21,6 +21,16 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      // Admin-only custom view for the student-roster importer (phase-1b).
+      afterNavLinks: ['/components/ImportStudents/ImportStudentsNavLink#default'],
+      views: {
+        importStudents: {
+          Component: '/components/ImportStudents/ImportStudentsView#default',
+          path: '/import-students',
+        },
+      },
+    },
   },
   // Phase 1: master-data collections. Teacher is modeled as fields on Users
   // (role + advisor assignment via Classroom.advisors). AttendanceRecord and
