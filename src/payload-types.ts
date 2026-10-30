@@ -68,6 +68,10 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    'academic-years': AcademicYear;
+    terms: Term;
+    classrooms: Classroom;
+    students: Student;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -76,6 +80,10 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    'academic-years': AcademicYearsSelect<false> | AcademicYearsSelect<true>;
+    terms: TermsSelect<false> | TermsSelect<true>;
+    classrooms: ClassroomsSelect<false> | ClassroomsSelect<true>;
+    students: StudentsSelect<false> | StudentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -121,6 +129,8 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  fullName?: string | null;
+  role: 'admin' | 'advisor' | 'discipline';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -140,6 +150,73 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "academic-years".
+ */
+export interface AcademicYear {
+  id: number;
+  /**
+   * ปีการศึกษาแบบพุทธศักราช (พ.ศ.) เช่น 2569
+   */
+  year: number;
+  isActive?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "terms".
+ */
+export interface Term {
+  id: number;
+  term: '1' | '2';
+  academicYear: number | AcademicYear;
+  startDate?: string | null;
+  endDate?: string | null;
+  isActive?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "classrooms".
+ */
+export interface Classroom {
+  id: number;
+  /**
+   * เช่น ม.4/2 — เว้นว่างได้ ระบบจะสร้างให้อัตโนมัติจากระดับชั้นและห้องที่
+   */
+  name?: string | null;
+  level: 'm1' | 'm2' | 'm3' | 'm4' | 'm5' | 'm6';
+  roomNumber: number;
+  academicYear: number | AcademicYear;
+  /**
+   * ครูที่ปรึกษาประจำห้อง (รองรับหลายคน)
+   */
+  advisors?: (number | User)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "students".
+ */
+export interface Student {
+  id: number;
+  studentId: string;
+  prefix?: ('ด.ช.' | 'ด.ญ.' | 'นาย' | 'น.ส.') | null;
+  firstName: string;
+  lastName: string;
+  classNumber?: number | null;
+  classroom: number | Classroom;
+  /**
+   * สถานะปรับเพิ่มได้ภายหลัง (เช่น แยกลาป่วย/ลากิจ)
+   */
+  status: 'studying' | 'transferred' | 'on_leave' | 'graduated';
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -164,10 +241,27 @@ export interface PayloadKv {
  */
 export interface PayloadLockedDocument {
   id: number;
-  document?: {
-    relationTo: 'users';
-    value: number | User;
-  } | null;
+  document?:
+    | ({
+        relationTo: 'users';
+        value: number | User;
+      } | null)
+    | ({
+        relationTo: 'academic-years';
+        value: number | AcademicYear;
+      } | null)
+    | ({
+        relationTo: 'terms';
+        value: number | Term;
+      } | null)
+    | ({
+        relationTo: 'classrooms';
+        value: number | Classroom;
+      } | null)
+    | ({
+        relationTo: 'students';
+        value: number | Student;
+      } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
@@ -215,6 +309,8 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  fullName?: T;
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -232,6 +328,57 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "academic-years_select".
+ */
+export interface AcademicYearsSelect<T extends boolean = true> {
+  year?: T;
+  isActive?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "terms_select".
+ */
+export interface TermsSelect<T extends boolean = true> {
+  term?: T;
+  academicYear?: T;
+  startDate?: T;
+  endDate?: T;
+  isActive?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "classrooms_select".
+ */
+export interface ClassroomsSelect<T extends boolean = true> {
+  name?: T;
+  level?: T;
+  roomNumber?: T;
+  academicYear?: T;
+  advisors?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "students_select".
+ */
+export interface StudentsSelect<T extends boolean = true> {
+  studentId?: T;
+  prefix?: T;
+  firstName?: T;
+  lastName?: T;
+  classNumber?: T;
+  classroom?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
