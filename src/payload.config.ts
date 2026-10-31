@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
 import { AcademicYear } from './collections/AcademicYear'
+import { AttendanceRecord } from './collections/AttendanceRecord'
+import { AuditLog } from './collections/AuditLog'
 import { Classroom } from './collections/Classroom'
 import { Student } from './collections/Student'
 import { Term } from './collections/Term'
@@ -32,10 +34,9 @@ export default buildConfig({
       },
     },
   },
-  // Phase 1: master-data collections. Teacher is modeled as fields on Users
-  // (role + advisor assignment via Classroom.advisors). AttendanceRecord and
-  // AuditLog are added in Phase 2.
-  collections: [Users, AcademicYear, Term, Classroom, Student],
+  // Phase 1 master data (Teacher modeled as fields on Users) + Phase 2 daily
+  // attendance layer: AttendanceRecord (audited) and the append-only AuditLog.
+  collections: [Users, AcademicYear, Term, Classroom, Student, AttendanceRecord, AuditLog],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

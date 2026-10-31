@@ -72,6 +72,8 @@ export interface Config {
     terms: Term;
     classrooms: Classroom;
     students: Student;
+    'attendance-records': AttendanceRecord;
+    'audit-logs': AuditLog;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,6 +86,8 @@ export interface Config {
     terms: TermsSelect<false> | TermsSelect<true>;
     classrooms: ClassroomsSelect<false> | ClassroomsSelect<true>;
     students: StudentsSelect<false> | StudentsSelect<true>;
+    'attendance-records': AttendanceRecordsSelect<false> | AttendanceRecordsSelect<true>;
+    'audit-logs': AuditLogsSelect<false> | AuditLogsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -220,6 +224,65 @@ export interface Student {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "attendance-records".
+ */
+export interface AttendanceRecord {
+  id: number;
+  student: number | Student;
+  /**
+   * วันที่ตามปฏิทินไทย รูปแบบ YYYY-MM-DD
+   */
+  date: string;
+  /**
+   * สถานะปรับเพิ่มได้ภายหลัง
+   */
+  status: 'present' | 'late' | 'leave' | 'absent' | 'left_early';
+  note?: string | null;
+  /**
+   * บันทึกอัตโนมัติจากห้องของนักเรียน ณ เวลาที่เช็คชื่อ
+   */
+  classroom?: (number | null) | Classroom;
+  academicYear?: (number | null) | AcademicYear;
+  term?: (number | null) | Term;
+  recordedBy?: (number | null) | User;
+  recordedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-logs".
+ */
+export interface AuditLog {
+  id: number;
+  collectionSlug?: string | null;
+  documentId?: string | null;
+  action?: ('create' | 'edit' | 'backdate' | 'delete') | null;
+  actor?: (number | null) | User;
+  timestamp?: string | null;
+  before?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  after?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -261,6 +324,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'students';
         value: number | Student;
+      } | null)
+    | ({
+        relationTo: 'attendance-records';
+        value: number | AttendanceRecord;
+      } | null)
+    | ({
+        relationTo: 'audit-logs';
+        value: number | AuditLog;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -377,6 +448,38 @@ export interface StudentsSelect<T extends boolean = true> {
   classNumber?: T;
   classroom?: T;
   status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "attendance-records_select".
+ */
+export interface AttendanceRecordsSelect<T extends boolean = true> {
+  student?: T;
+  date?: T;
+  status?: T;
+  note?: T;
+  classroom?: T;
+  academicYear?: T;
+  term?: T;
+  recordedBy?: T;
+  recordedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-logs_select".
+ */
+export interface AuditLogsSelect<T extends boolean = true> {
+  collectionSlug?: T;
+  documentId?: T;
+  action?: T;
+  actor?: T;
+  timestamp?: T;
+  before?: T;
+  after?: T;
   updatedAt?: T;
   createdAt?: T;
 }
