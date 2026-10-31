@@ -4,6 +4,7 @@ import { advisorClassroomIds } from './advisorClassrooms'
 import { isAdmin, isAdminOrDiscipline } from './roles'
 
 export * from './roles'
+export * from './attendance'
 export { advisorClassroomIds } from './advisorClassrooms'
 
 /** Any authenticated user may read (config everyone needs: years, terms). */
