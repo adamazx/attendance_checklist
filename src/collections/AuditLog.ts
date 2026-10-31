@@ -11,6 +11,7 @@ export const AuditLog: CollectionConfig = {
   admin: {
     useAsTitle: 'documentId',
     defaultColumns: ['timestamp', 'collectionSlug', 'action', 'actor', 'documentId'],
+    group: 'การเช็คชื่อ',
   },
   access: {
     read: auditLogRead,

@@ -29,6 +29,7 @@ export const AttendanceRecord: CollectionConfig = {
   admin: {
     useAsTitle: 'date',
     defaultColumns: ['student', 'date', 'status', 'classroom', 'recordedBy'],
+    group: 'การเช็คชื่อ',
   },
   access: {
     read: attendanceRead,

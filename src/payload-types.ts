@@ -133,7 +133,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
-  fullName?: string | null;
+  fullName: string;
   role: 'admin' | 'advisor' | 'discipline';
   updatedAt: string;
   createdAt: string;

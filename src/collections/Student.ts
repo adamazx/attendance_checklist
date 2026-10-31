@@ -11,6 +11,7 @@ export const Student: CollectionConfig = {
   admin: {
     useAsTitle: 'studentId',
     defaultColumns: ['studentId', 'firstName', 'lastName', 'classroom', 'status'],
+    group: 'ข้อมูลหลัก',
   },
   access: {
     read: studentRead,
