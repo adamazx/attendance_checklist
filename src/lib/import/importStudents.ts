@@ -36,9 +36,13 @@ interface ClassroomIndex {
 const buildClassroomIndex = async (
   payload: Payload,
   user: PayloadRequest['user'],
+  academicYearId: string | number,
 ): Promise<ClassroomIndex> => {
+  // Scope to a single academic year so a recurring room (e.g. "ม.4/2" present in
+  // several years) resolves to exactly one classroom instead of being ambiguous.
   const res = await payload.find({
     collection: 'classrooms',
+    where: { academicYear: { equals: academicYearId } },
     depth: 0,
     limit: 0,
     pagination: false,
@@ -52,7 +56,8 @@ const buildClassroomIndex = async (
     const list = byKey.get(key) ?? []
     // The level/room key and the name-derived key can coincide (both "5/97"):
     // only record a classroom once per key so a single room is not seen as
-    // ambiguous. Genuine ambiguity (two rooms, different years) still stands.
+    // ambiguous. Genuine ambiguity (two distinct rooms sharing a key within the
+    // same active year — a data-entry duplicate) still stands.
     if (!list.includes(id)) list.push(id)
     byKey.set(key, list)
   }
@@ -92,7 +97,9 @@ const resolveClassroom = (
     const ids = index.byKey.get(c)
     if (ids && ids.length === 1) return { id: ids[0] }
     if (ids && ids.length > 1) {
-      return { error: `ห้องเรียน "${cell}" ตรงกับหลายห้อง (หลายปีการศึกษา) โปรดระบุให้ชัดเจน` }
+      return {
+        error: `ห้องเรียน "${cell}" ตรงกับหลายห้องในปีการศึกษาที่ใช้งานอยู่ โปรดตรวจสอบว่ามีห้องซ้ำกันหรือไม่`,
+      }
     }
   }
   return { error: `ไม่พบห้องเรียน "${cell}" ในระบบ` }
@@ -130,7 +137,30 @@ export const importStudents = async (
   const dataRows = grid.slice(1)
   result.totalRows = dataRows.length
 
-  const classroomIndex = await buildClassroomIndex(payload, user)
+  // Imports target the ACTIVE academic year, so classroom names resolve to that
+  // year's rooms only. Require exactly one active year; otherwise it's ambiguous
+  // which year to import into.
+  const activeYears = await payload.find({
+    collection: 'academic-years',
+    where: { isActive: { equals: true } },
+    depth: 0,
+    limit: 2,
+    pagination: false,
+    overrideAccess: false,
+    user,
+  })
+  if (activeYears.docs.length === 0) {
+    result.fatal = 'ยังไม่ได้กำหนดปีการศึกษาที่ใช้งานอยู่ (isActive) โปรดตั้งค่าก่อนนำเข้า'
+    return result
+  }
+  if (activeYears.docs.length > 1) {
+    result.fatal =
+      'มีปีการศึกษาที่ใช้งานอยู่ (isActive) มากกว่าหนึ่งปี โปรดตั้งให้เหลือเพียงปีเดียวก่อนนำเข้า'
+    return result
+  }
+  const activeYearId = (activeYears.docs[0] as { id: string | number }).id
+
+  const classroomIndex = await buildClassroomIndex(payload, user, activeYearId)
 
   // Existing studentIds (dedupe against the DB).
   const existing = await payload.find({

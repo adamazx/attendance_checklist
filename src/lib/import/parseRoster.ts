@@ -113,12 +113,17 @@ export const parseRoster = (fileName: string, bytes: ArrayBuffer): Grid => {
     const sheetName = wb.SheetNames[0]
     if (!sheetName) return []
     const sheet = wb.Sheets[sheetName]
-    // `raw: false` yields formatted strings so studentIds keep their text form.
-    const grid = XLSX.utils.sheet_to_json<string[]>(sheet, {
+    // `raw: true` returns underlying values (numbers stay numbers, text stays
+    // text) rather than Excel's *formatted* text. `normalizeGrid` stringifies
+    // every cell via `.toString()`, and JS prints integers up to 1e21 without an
+    // exponent — so a 13-digit numeric studentId (e.g. 1234567890123) survives
+    // intact, whereas `raw: false` would format it to "1.23457E+12". The student
+    // roster has no date columns, so the usual raw-date-serial caveat is moot.
+    const grid = XLSX.utils.sheet_to_json<(string | number)[]>(sheet, {
       header: 1,
       blankrows: false,
       defval: '',
-      raw: false,
+      raw: true,
     })
     return normalizeGrid(grid as unknown as Grid)
   }
