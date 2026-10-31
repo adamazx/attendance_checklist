@@ -10,6 +10,9 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // Lets the node:test files import a sibling module with its explicit `.ts`
+    // extension (required by `node --test`); safe because we never emit (noEmit).
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
