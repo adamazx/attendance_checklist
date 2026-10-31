@@ -10,6 +10,7 @@ export const Term: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'term',
+    group: 'ข้อมูลหลัก',
   },
   access: {
     read: readAuthenticated,

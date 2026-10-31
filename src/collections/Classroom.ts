@@ -30,6 +30,8 @@ export const Classroom: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'name',
+    defaultColumns: ['name', 'level', 'roomNumber', 'academicYear', 'advisors'],
+    group: 'ข้อมูลหลัก',
   },
   access: {
     read: classroomRead,

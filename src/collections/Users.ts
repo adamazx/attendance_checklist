@@ -31,8 +31,14 @@ const usersUpdate: Access = ({ req: { user } }) => {
 
 export const Users: CollectionConfig = {
   slug: 'users',
+  labels: {
+    singular: 'ชื่อผู้ใช้',
+    plural: 'ชื่อผู้ใช้',
+  },
   admin: {
     useAsTitle: 'fullName',
+    defaultColumns: ['fullName', 'email', 'role'],
+    group: 'ข้อมูลหลัก',
   },
   auth: true,
   access: {
@@ -47,6 +53,7 @@ export const Users: CollectionConfig = {
     {
       name: 'fullName',
       type: 'text',
+      required: true,
       label: 'ชื่อ-นามสกุล',
     },
     {

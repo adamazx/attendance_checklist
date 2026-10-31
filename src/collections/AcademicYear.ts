@@ -10,6 +10,7 @@ export const AcademicYear: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'year',
+    group: 'ข้อมูลหลัก',
   },
   access: {
     read: readAuthenticated,

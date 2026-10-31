@@ -1,6 +1,8 @@
 // Storage of all dates is ISO/UTC; the UI layer renders them in Buddhist-era (พ.ศ.) with Thai month names.
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { en } from '@payloadcms/translations/languages/en'
+import { th } from '@payloadcms/translations/languages/th'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -18,6 +20,10 @@ const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 export default buildConfig({
+  i18n: {
+    fallbackLanguage: 'th',
+    supportedLanguages: { th, en },
+  },
   admin: {
     user: Users.slug,
     importMap: {
