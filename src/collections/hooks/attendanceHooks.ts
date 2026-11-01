@@ -57,7 +57,12 @@ export const setSnapshotAndEnforce: CollectionBeforeChangeHook = async ({ data, 
   if (operation !== 'create') return data
 
   const studentId = relId(data.student)
-  if (!studentId) return data // let field validation report the missing student
+  if (!studentId) {
+    // Fail closed: only a truly absent student may fall through to field validation.
+    // A malformed value (array, 0) must not skip the scoping check below.
+    if (data.student != null) throw new Forbidden(req.t)
+    return data
+  }
 
   const student = await req.payload.findByID({
     collection: 'students',
