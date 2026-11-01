@@ -73,8 +73,11 @@ img {
   display: block;
 }
 
-a {
-  color: currentColor;
+/* In the base layer: an unlayered rule would beat every Tailwind text-* utility. */
+@layer base {
+  a {
+    color: currentColor;
+  }
 }
 
 /* Status radios: the input stays focusable and screen-reader visible behind its label. */
