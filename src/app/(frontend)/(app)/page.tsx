@@ -4,19 +4,38 @@ import { HomeTile, type HomeTileProps } from '@/components/shell/HomeTile'
 import { requireUser } from '@/lib/auth/currentUser'
 import { formatThaiDateTime } from '@/lib/date/thaiDay'
 
+const classroomReportTile: HomeTileProps = {
+  href: '/reports/classroom',
+  icon: '📄',
+  label: 'รายงานรายห้อง',
+  tone: 'blue',
+}
+const lateReportTile: HomeTileProps = { href: '/reports/late', icon: '⏰', label: 'นักเรียนมาสาย', tone: 'green' }
+const studentReportTile: HomeTileProps = {
+  href: '/reports/student',
+  icon: '🧾',
+  label: 'รายงานนักเรียน',
+  tone: 'blue',
+}
+
 const advisorTiles: HomeTileProps[] = [
   { href: '/attendance', icon: '📌', label: 'เช็คชื่อ', tone: 'amber' },
-  { comingSoon: true, icon: '📄', label: 'รายงานรายห้อง', tone: 'blue' },
+  classroomReportTile,
   { comingSoon: true, icon: '📊', label: 'สถิตินักเรียน', tone: 'blue' },
   { comingSoon: true, icon: '📈', label: 'กราฟ', tone: 'blue' },
   { href: '/attendance/edit', icon: '✏️', label: 'แก้ไขเช็คชื่อ', tone: 'green' },
   { href: '/attendance/backdate', icon: '📝', label: 'เช็คชื่อย้อนหลัง', tone: 'blue' },
-  { comingSoon: true, icon: '⏰', label: 'นักเรียนมาสาย', tone: 'green' },
-  { comingSoon: true, icon: '🧾', label: 'รายงานนักเรียน', tone: 'blue' },
+  lateReportTile,
+  studentReportTile,
 ]
 
-// Admin and discipline work in /admin for now (Phase 2b is the advisor UI).
-const staffTiles: HomeTileProps[] = [{ href: '/admin', icon: '🛠️', label: 'ระบบผู้ดูแล', tone: 'blue' }]
+// Admin and discipline record in /admin; the reports cover every classroom for them.
+const staffTiles: HomeTileProps[] = [
+  { href: '/admin', icon: '🛠️', label: 'ระบบผู้ดูแล', tone: 'blue' },
+  classroomReportTile,
+  studentReportTile,
+  lateReportTile,
+]
 
 const accountTiles: HomeTileProps[] = [
   { href: '/change-password', icon: '🔑', label: 'เปลี่ยนรหัสผ่าน', tone: 'green' },
