@@ -19,7 +19,26 @@ import { Users } from './collections/Users'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+/**
+ * Public origin of the app. Payload adds it to the CSRF allowlist, so cookie auth is
+ * honored only for requests from it (or from CSRF_ALLOWED_ORIGINS). Production must
+ * set it: an empty serverURL with no extra origins means an empty allowlist, which
+ * turns the CSRF check off.
+ */
+const serverURL =
+  process.env.NEXT_PUBLIC_SERVER_URL ||
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000')
+if (!serverURL) throw new Error('NEXT_PUBLIC_SERVER_URL must be set in production')
+
+/** Extra trusted origins (e.g. a preview deployment), comma-separated. */
+const extraOrigins = (process.env.CSRF_ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
 export default buildConfig({
+  serverURL,
+  csrf: extraOrigins,
   i18n: {
     fallbackLanguage: 'th',
     supportedLanguages: { th, en },
