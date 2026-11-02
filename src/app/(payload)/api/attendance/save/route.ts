@@ -110,7 +110,7 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json(
       {
         conflicts: plan.conflicts,
-        error: `${names.join(', ')} มีบันทึกการเช็คชื่อของวันนี้แล้วในห้องเดิม — ติดต่อผู้ดูแลระบบหากต้องแก้ไข`,
+        error: `${names.join(', ')} มีบันทึกการเช็คชื่อของวันที่เลือกแล้วในห้องเดิม — ติดต่อผู้ดูแลระบบหากต้องแก้ไข`,
       },
       { status: 409 },
     )

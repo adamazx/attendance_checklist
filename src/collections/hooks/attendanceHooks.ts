@@ -42,9 +42,18 @@ const deriveTerm = async (
   return null
 }
 
-/** Canonicalize `date` to the Asia/Bangkok calendar day (YYYY-MM-DD). */
+/**
+ * Canonicalize `date` to the Asia/Bangkok calendar day (YYYY-MM-DD). An unparseable
+ * value is left as-is so the field's validate rejects it (400, not a thrown 500).
+ */
 export const normalizeAttendanceDate: CollectionBeforeValidateHook = ({ data }) => {
-  if (data && data.date) data.date = toThaiDay(data.date as string)
+  if (data && data.date) {
+    try {
+      data.date = toThaiDay(data.date as string)
+    } catch {
+      // left for validation
+    }
+  }
   return data
 }
 
