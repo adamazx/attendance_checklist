@@ -21,7 +21,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
   return (
     <html lang="th" className={sarabun.variable}>
       <body>
-        <main>{children}</main>
+        {children}
       </body>
     </html>
   )

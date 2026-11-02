@@ -40,3 +40,88 @@ export const toThaiDay = (input: string | Date): string => {
 
 /** Today's calendar day in Asia/Bangkok, as `YYYY-MM-DD`. */
 export const todayThai = (): string => dayFormatter.format(new Date())
+
+/** Thai month names, January first. */
+export const THAI_MONTHS = [
+  'มกราคม',
+  'กุมภาพันธ์',
+  'มีนาคม',
+  'เมษายน',
+  'พฤษภาคม',
+  'มิถุนายน',
+  'กรกฎาคม',
+  'สิงหาคม',
+  'กันยายน',
+  'ตุลาคม',
+  'พฤศจิกายน',
+  'ธันวาคม',
+] as const
+
+const THAI_MONTHS_SHORT = [
+  'ม.ค.',
+  'ก.พ.',
+  'มี.ค.',
+  'เม.ย.',
+  'พ.ค.',
+  'มิ.ย.',
+  'ก.ค.',
+  'ส.ค.',
+  'ก.ย.',
+  'ต.ค.',
+  'พ.ย.',
+  'ธ.ค.',
+] as const
+
+const THAI_WEEKDAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'] as const
+
+/** Buddhist-era year offset (พ.ศ. = ค.ศ. + 543). */
+export const BE_OFFSET = 543
+
+const parts = (day: string): [number, number, number] => {
+  const [y, m, d] = day.split('-').map(Number) as [number, number, number]
+  return [y, m, d]
+}
+
+/** True for a `YYYY-MM-DD` that exists on the calendar (the regex alone accepts 2026-02-31). */
+export const isRealThaiDay = (day: string): boolean => {
+  if (!THAI_DAY_RE.test(day)) return false
+  const [y, m, d] = parts(day)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d
+}
+
+/** `2026-11-02` → `2 พฤศจิกายน 2569`. */
+export const formatThaiDay = (day: string): string => {
+  const [y, m, d] = parts(day)
+  return `${d} ${THAI_MONTHS[m - 1]} ${y + BE_OFFSET}`
+}
+
+/** `2026-11-02` → `2 พ.ย. 2569`. */
+export const formatThaiDayShort = (day: string): string => {
+  const [y, m, d] = parts(day)
+  return `${d} ${THAI_MONTHS_SHORT[m - 1]} ${y + BE_OFFSET}`
+}
+
+/** `2026-11-02` → `วันจันทร์ที่ 2 พฤศจิกายน 2569`. */
+export const formatThaiDayLong = (day: string): string => {
+  const [y, m, d] = parts(day)
+  const weekday = THAI_WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]
+  return `วัน${weekday}ที่ ${formatThaiDay(day)}`
+}
+
+const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: BANGKOK,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+/** An instant → `2 พ.ย. 2569, 14:05` in Asia/Bangkok. */
+export const formatThaiDateTime = (input: Date): string =>
+  `${formatThaiDayShort(toThaiDay(input))}, ${timeFormatter.format(input)}`
+
+/** Shift a calendar day by whole days (no timezone involved). */
+export const shiftThaiDay = (day: string, days: number): string => {
+  const [y, m, d] = parts(day)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
+}

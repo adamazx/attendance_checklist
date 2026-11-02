@@ -1,4 +1,6 @@
-import type { Access, CollectionConfig } from 'payload'
+import type { Access, CollectionBeforeValidateHook, CollectionConfig } from 'payload'
+
+import { Forbidden } from 'payload'
 
 import { adminFieldAccess, adminOnly, isAdmin, isAdminOrDiscipline } from '@/access'
 
@@ -29,6 +31,19 @@ const usersUpdate: Access = ({ req: { user } }) => {
   return { id: { equals: user.id } }
 }
 
+/**
+ * A non-admin may change their password or email only through
+ * /api/account/change-password, which verifies the current password and sets this
+ * flag. `req.context` is server-only, so a REST/GraphQL client cannot forge it;
+ * without this, anyone at an unattended session could take over the account.
+ */
+const guardCredentialChange: CollectionBeforeValidateHook = ({ data, operation, originalDoc, req }) => {
+  if (operation !== 'update' || !req.user || isAdmin(req.user)) return data
+  const changesCredentials = Boolean(data?.password) || (data?.email && data.email !== originalDoc?.email)
+  if (changesCredentials && !req.context.passwordChangeVerified) throw new Forbidden(req.t)
+  return data
+}
+
 export const Users: CollectionConfig = {
   slug: 'users',
   labels: {
@@ -46,6 +61,12 @@ export const Users: CollectionConfig = {
     create: adminOnly,
     update: usersUpdate,
     delete: adminOnly,
+    // Payload's default lets any logged-in user clear any account's lockout,
+    // which would reset the login-attempt counter and allow unlimited guessing.
+    unlock: adminOnly,
+  },
+  hooks: {
+    beforeValidate: [guardCredentialChange],
   },
   fields: [
     // Email added by default
