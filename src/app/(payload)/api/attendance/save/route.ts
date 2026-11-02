@@ -25,10 +25,11 @@ import {
 } from 'payload'
 
 import { isDiscipline } from '@/access'
+import { ATTENDANCE_DAY_MESSAGES, checkAttendanceDay } from '@/lib/attendance/dateRules'
 import { planSave, type SaveEntry } from '@/lib/attendance/planSave'
 import { listRollCallClassrooms, loadExisting, loadRoster } from '@/lib/attendance/rollCall'
 import { isAttendanceStatus } from '@/lib/attendance/statuses'
-import { isRealThaiDay, todayThai } from '@/lib/date/thaiDay'
+import { todayThai } from '@/lib/date/thaiDay'
 
 const MAX_ENTRIES = 100
 const MAX_NOTE_LENGTH = 500
@@ -68,11 +69,10 @@ export async function POST(request: Request): Promise<Response> {
   const { classroomId, date, entries: rawEntries } = body ?? {}
 
   if (!isId(classroomId)) return badRequest('ไม่พบห้องเรียน')
-  if (typeof date !== 'string' || !isRealThaiDay(date)) return badRequest('วันที่ไม่ถูกต้อง')
-  const today = todayThai()
-  if (date > today) return badRequest('ไม่สามารถเช็คชื่อล่วงหน้าได้')
-  // Same floor as the date picker: this calendar year and the previous one.
-  if (date.slice(0, 4) < String(Number(today.slice(0, 4)) - 1)) return badRequest('วันที่เก่าเกินไป')
+  if (typeof date !== 'string') return badRequest(ATTENDANCE_DAY_MESSAGES.invalid)
+  // Same rule the collection enforces on create; checked here for a clean 400.
+  const dateError = checkAttendanceDay(date, todayThai())
+  if (dateError) return badRequest(ATTENDANCE_DAY_MESSAGES[dateError])
   if (!Array.isArray(rawEntries) || rawEntries.length === 0 || rawEntries.length > MAX_ENTRIES) {
     return badRequest('รายการนักเรียนไม่ถูกต้อง')
   }

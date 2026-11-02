@@ -6,7 +6,7 @@
  */
 import type { PayloadRequest } from 'payload'
 
-import { advisorClassroomIds } from '@/access'
+import { advisorActiveClassroomIds } from '@/access'
 import { toThaiDay } from '@/lib/date/thaiDay'
 import type { Student } from '@/payload-types'
 
@@ -31,27 +31,17 @@ export interface RollCallRow {
 const relId = (v: unknown): number | null =>
   v && typeof v === 'object' ? (v as { id: number }).id : ((v as number | null | undefined) ?? null)
 
-/** The caller's assigned classrooms in the active academic year. */
+/**
+ * The caller's assigned classrooms in the active academic year — the same set the
+ * collection lets an advisor write to.
+ */
 export const listRollCallClassrooms = async (req: PayloadRequest): Promise<RollCallClassroom[]> => {
-  const assigned = await advisorClassroomIds(req)
-  if (assigned.length === 0) return []
-
-  const years = await req.payload.find({
-    collection: 'academic-years',
-    where: { isActive: { equals: true } },
-    depth: 0,
-    limit: 0,
-    pagination: false,
-    overrideAccess: false,
-    req,
-  })
-  if (years.docs.length === 0) return []
+  const writable = await advisorActiveClassroomIds(req)
+  if (writable.length === 0) return []
 
   const classrooms = await req.payload.find({
     collection: 'classrooms',
-    where: {
-      and: [{ id: { in: assigned } }, { academicYear: { in: years.docs.map((y) => y.id) } }],
-    },
+    where: { id: { in: writable } },
     sort: 'name',
     depth: 0,
     limit: 0,
