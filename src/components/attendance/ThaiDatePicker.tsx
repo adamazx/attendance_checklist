@@ -13,9 +13,11 @@ const daysInMonth = (year: number, month: number): number => new Date(Date.UTC(y
  * usually ค.ศ., so it cannot honour the Buddhist-era rule. Submits `YYYY-MM-DD` in a
  * hidden field; the page validates the range on the server.
  */
-export function ThaiDatePicker(props: { name: string; today: string; value: string }) {
+export function ThaiDatePicker(props: { minYear?: number; name: string; today: string; value: string }) {
   const [initialY, initialM, initialD] = props.value.split('-').map(Number) as [number, number, number]
   const currentYear = Number(props.today.slice(0, 4))
+  // Roll-call offers last year and this one; reports pass an earlier minYear for history.
+  const firstYear = Math.min(props.minYear ?? currentYear - 1, initialY)
   const [year, setYear] = useState(initialY)
   const [month, setMonth] = useState(initialM)
   const [day, setDay] = useState(initialD)
@@ -50,7 +52,7 @@ export function ThaiDatePicker(props: { name: string; today: string; value: stri
       <label className="block font-medium">
         พ.ศ.
         <select className={selectClass} onChange={(e) => setYear(Number(e.target.value))} value={year}>
-          {[currentYear - 1, currentYear].map((y) => (
+          {Array.from({ length: currentYear - firstYear + 1 }, (_, i) => firstYear + i).map((y) => (
             <option key={y} value={y}>
               {y + BE_OFFSET}
             </option>

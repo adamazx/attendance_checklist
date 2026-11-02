@@ -1,9 +1,7 @@
 import React from 'react'
 
-import type { RollCallClassroom } from '@/lib/attendance/rollCall'
-
 /** Classroom choice for the GET filter form; a fixed label when there is only one. */
-export function ClassroomSelect(props: { classrooms: RollCallClassroom[]; selectedId: number }) {
+export function ClassroomSelect(props: { classrooms: { id: number; name: string }[]; selectedId: number }) {
   const { classrooms, selectedId } = props
   if (classrooms.length === 1) {
     return <input name="classroom" type="hidden" value={selectedId} />
