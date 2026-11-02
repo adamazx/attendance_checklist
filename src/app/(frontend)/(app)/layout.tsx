@@ -9,9 +9,13 @@ export default async function AppLayout(props: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Navbar userName={user.fullName} />
-      <main className="mx-auto w-full max-w-[1080px] flex-1 px-4">{props.children}</main>
-      <Footer />
+      <div className="print:hidden">
+        <Navbar userName={user.fullName} />
+      </div>
+      <main className="mx-auto w-full max-w-[1080px] flex-1 px-4 print:max-w-none print:px-0">{props.children}</main>
+      <div className="print:hidden">
+        <Footer />
+      </div>
     </div>
   )
 }

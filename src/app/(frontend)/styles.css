@@ -80,6 +80,24 @@ img {
   }
 }
 
+/* Printed reports: plain paper, keep the status colours, tables never split a row. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body {
+    background: var(--surface);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+}
+
 /* Status radios: the input stays focusable and screen-reader visible behind its label. */
 .status-option input:focus-visible + span {
   outline: 3px solid var(--brand-gold);

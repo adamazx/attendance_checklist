@@ -110,7 +110,7 @@ export const loadExisting = async (
   }))
 }
 
-export const fullName = (s: Student): string => `${s.prefix ?? ''}${s.firstName} ${s.lastName}`.trim()
+export const fullName = (s: Pick<Student, 'firstName' | 'lastName' | 'prefix'>): string => `${s.prefix ?? ''}${s.firstName} ${s.lastName}`.trim()
 
 /**
  * The rows for one classroom and day, pre-filled from saved records. `savedOnly`
