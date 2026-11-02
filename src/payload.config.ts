@@ -62,6 +62,9 @@ export default buildConfig({
   // Phase 1 master data (Teacher modeled as fields on Users) + Phase 2 daily
   // attendance layer: AttendanceRecord (audited) and the append-only AuditLog.
   collections: [Users, AcademicYear, Term, Classroom, Student, AttendanceRecord, AuditLog],
+  // The app uses REST and the Local API only. GraphQL also can't build its schema:
+  // the Thai Student.prefix option values aren't valid GraphQL enum names.
+  graphQL: { disable: true },
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
