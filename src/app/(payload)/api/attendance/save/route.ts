@@ -27,7 +27,7 @@ import {
 import { isDiscipline } from '@/access'
 import { ATTENDANCE_DAY_MESSAGES, checkAttendanceDay } from '@/lib/attendance/dateRules'
 import { planSave, type SaveEntry } from '@/lib/attendance/planSave'
-import { listRollCallClassrooms, loadExisting, loadRoster } from '@/lib/attendance/rollCall'
+import { fullName, listRollCallClassrooms, loadExisting, loadRoster } from '@/lib/attendance/rollCall'
 import { isAttendanceStatus } from '@/lib/attendance/statuses'
 import { todayThai } from '@/lib/date/thaiDay'
 
@@ -89,7 +89,14 @@ export async function POST(request: Request): Promise<Response> {
   if (!classrooms.some((c) => c.id === classroomId)) return forbidden()
 
   const roster = await loadRoster(req, classroomId)
-  const existing = await loadExisting(req, { date, studentIds: valid.map((e) => e.studentId) })
+  // overrideAccess: a student who moved in may have today's record under their old
+  // classroom, which this advisor can't read. It only feeds the plan's conflict
+  // check; every write below still runs with the caller's access.
+  const existing = await loadExisting(req, {
+    date,
+    overrideAccess: true,
+    studentIds: valid.map((e) => e.studentId),
+  })
   const plan = planSave({
     classroomId: classroomId,
     entries: valid,
@@ -97,6 +104,17 @@ export async function POST(request: Request): Promise<Response> {
     rosterIds: new Set(roster.map((s) => s.id)),
   })
   if (plan.outsiders.length > 0) return forbidden()
+  if (plan.conflicts.length > 0) {
+    // Conflicts are always on this roster, so the names are ones the caller can read.
+    const names = roster.filter((s) => plan.conflicts.includes(s.id)).map(fullName)
+    return NextResponse.json(
+      {
+        conflicts: plan.conflicts,
+        error: `${names.join(', ')} มีบันทึกการเช็คชื่อของวันนี้แล้วในห้องเดิม — ติดต่อผู้ดูแลระบบหากต้องแก้ไข`,
+      },
+      { status: 409 },
+    )
+  }
 
   await initTransaction(req)
   try {

@@ -72,12 +72,16 @@ export const loadRoster = async (req: PayloadRequest, classroomId: number): Prom
   return result.docs
 }
 
-/** Records the caller may read for a day, for the given students or this classroom. */
+/**
+ * Records for a day, for the given students or this classroom — those the caller may
+ * read, or all of them with `overrideAccess` (the save route needs records under a
+ * student's old classroom to detect a conflict; it never returns them).
+ */
 export const loadExisting = async (
   req: PayloadRequest,
-  args: { classroomId?: number; date: string; studentIds?: number[] },
+  args: { classroomId?: number; date: string; overrideAccess?: boolean; studentIds?: number[] },
 ): Promise<ExistingRecord[]> => {
-  const { classroomId, date, studentIds = [] } = args
+  const { classroomId, date, overrideAccess = false, studentIds = [] } = args
   const result = await req.payload.find({
     collection: 'attendance-records',
     where: {
@@ -94,7 +98,7 @@ export const loadExisting = async (
     depth: 0,
     limit: 0,
     pagination: false,
-    overrideAccess: false,
+    overrideAccess,
     req,
   })
   return result.docs.map((r) => ({
@@ -106,7 +110,7 @@ export const loadExisting = async (
   }))
 }
 
-const fullName = (s: Student): string => `${s.prefix ?? ''}${s.firstName} ${s.lastName}`.trim()
+export const fullName = (s: Student): string => `${s.prefix ?? ''}${s.firstName} ${s.lastName}`.trim()
 
 /**
  * The rows for one classroom and day, pre-filled from saved records. `savedOnly`
