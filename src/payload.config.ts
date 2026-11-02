@@ -19,7 +19,26 @@ import { Users } from './collections/Users'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+/**
+ * Public origin of the app. Payload adds it to the CSRF allowlist, so cookie auth is
+ * honored only for requests from it (or from CSRF_ALLOWED_ORIGINS). Production must
+ * set it: an empty serverURL with no extra origins means an empty allowlist, which
+ * turns the CSRF check off.
+ */
+const serverURL =
+  process.env.NEXT_PUBLIC_SERVER_URL ||
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000')
+if (!serverURL) throw new Error('NEXT_PUBLIC_SERVER_URL must be set in production')
+
+/** Extra trusted origins (e.g. a preview deployment), comma-separated. */
+const extraOrigins = (process.env.CSRF_ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
 export default buildConfig({
+  serverURL,
+  csrf: extraOrigins,
   i18n: {
     fallbackLanguage: 'th',
     supportedLanguages: { th, en },
@@ -43,6 +62,9 @@ export default buildConfig({
   // Phase 1 master data (Teacher modeled as fields on Users) + Phase 2 daily
   // attendance layer: AttendanceRecord (audited) and the append-only AuditLog.
   collections: [Users, AcademicYear, Term, Classroom, Student, AttendanceRecord, AuditLog],
+  // The app uses REST and the Local API only. GraphQL also can't build its schema:
+  // the Thai Student.prefix option values aren't valid GraphQL enum names.
+  graphQL: { disable: true },
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

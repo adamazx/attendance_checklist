@@ -67,6 +67,25 @@ test('planSave: a record in another classroom does not admit an off-roster stude
   assert.deepEqual(plan.updates, [])
 })
 
+test('planSave: a roster student recorded under another classroom that day is a conflict', () => {
+  const plan = planSave({
+    classroomId: CLASSROOM,
+    entries: [
+      { note: '', status: 'present', studentId: 7 },
+      { note: '', status: 'present', studentId: 8 },
+    ],
+    existing: [{ ...record, classroomId: 2 }],
+    rosterIds: new Set([7, 8]),
+  })
+  assert.deepEqual(plan.conflicts, [7])
+  assert.deepEqual(plan.updates, [])
+  assert.deepEqual(plan.outsiders, [])
+  assert.deepEqual(
+    plan.creates.map((e) => e.studentId),
+    [8],
+  )
+})
+
 test('planSave: a departed student with a record in this classroom can still be edited', () => {
   const plan = planSave({
     classroomId: CLASSROOM,

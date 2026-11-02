@@ -1,7 +1,8 @@
-import type { CollectionConfig, FieldAccess } from 'payload'
+import type { CollectionConfig, FieldAccess, TextFieldSingleValidation } from 'payload'
 
 import { attendanceCreate, attendanceModify, attendanceRead } from '@/access'
-import { THAI_DAY_RE } from '@/lib/date/thaiDay'
+import { ATTENDANCE_DAY_MESSAGES, checkAttendanceDay } from '@/lib/attendance/dateRules'
+import { THAI_DAY_RE, todayThai } from '@/lib/date/thaiDay'
 
 import {
   auditAttendanceChange,
@@ -65,8 +66,15 @@ export const AttendanceRecord: CollectionConfig = {
       admin: {
         description: 'วันที่ตามปฏิทินไทย รูปแบบ YYYY-MM-DD',
       },
-      validate: (val: unknown) =>
-        (typeof val === 'string' && THAI_DAY_RE.test(val)) || 'รูปแบบวันที่ต้องเป็น YYYY-MM-DD',
+      // On create the day must also be recordable (real, not future, within the
+      // floor) — the backstop behind the save route for direct REST writes. Not on
+      // update: the date can't change then, and old records must stay editable.
+      validate: ((val, { operation }) => {
+        if (typeof val !== 'string' || !THAI_DAY_RE.test(val)) return 'รูปแบบวันที่ต้องเป็น YYYY-MM-DD'
+        if (operation !== 'create') return true
+        const error = checkAttendanceDay(val, todayThai())
+        return error ? ATTENDANCE_DAY_MESSAGES[error] : true
+      }) satisfies TextFieldSingleValidation,
       access: { update: noUpdate },
     },
     {

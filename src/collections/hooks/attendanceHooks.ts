@@ -12,7 +12,7 @@ import type {
 
 import { Forbidden } from 'payload'
 
-import { advisorClassroomIds, isAdmin } from '@/access'
+import { advisorActiveClassroomIds, isAdmin } from '@/access'
 import { writeAuditLog } from '@/lib/audit/writeAuditLog'
 import { toThaiDay, todayThai } from '@/lib/date/thaiDay'
 
@@ -42,9 +42,18 @@ const deriveTerm = async (
   return null
 }
 
-/** Canonicalize `date` to the Asia/Bangkok calendar day (YYYY-MM-DD). */
+/**
+ * Canonicalize `date` to the Asia/Bangkok calendar day (YYYY-MM-DD). An unparseable
+ * value is left as-is so the field's validate rejects it (400, not a thrown 500).
+ */
 export const normalizeAttendanceDate: CollectionBeforeValidateHook = ({ data }) => {
-  if (data && data.date) data.date = toThaiDay(data.date as string)
+  if (data && data.date) {
+    try {
+      data.date = toThaiDay(data.date as string)
+    } catch {
+      // left for validation
+    }
+  }
   return data
 }
 
@@ -74,10 +83,11 @@ export const setSnapshotAndEnforce: CollectionBeforeChangeHook = async ({ data, 
   const classroomId = relId((student as { classroom?: unknown }).classroom)
 
   // Advisor write-scoping: a non-admin may only record for a student in their
-  // own classroom(s). (Discipline can't reach create per access; guard anyway.)
+  // own classroom(s) of the active academic year. (Discipline can't reach create
+  // per access; guard anyway.)
   const user = req.user
   if (user && !isAdmin(user)) {
-    const ids = (await advisorClassroomIds(req)).map(String)
+    const ids = (await advisorActiveClassroomIds(req)).map(String)
     if (!classroomId || !ids.includes(String(classroomId))) {
       throw new Forbidden(req.t)
     }

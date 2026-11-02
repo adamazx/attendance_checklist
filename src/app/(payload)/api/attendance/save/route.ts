@@ -25,10 +25,11 @@ import {
 } from 'payload'
 
 import { isDiscipline } from '@/access'
+import { ATTENDANCE_DAY_MESSAGES, checkAttendanceDay } from '@/lib/attendance/dateRules'
 import { planSave, type SaveEntry } from '@/lib/attendance/planSave'
-import { listRollCallClassrooms, loadExisting, loadRoster } from '@/lib/attendance/rollCall'
+import { fullName, listRollCallClassrooms, loadExisting, loadRoster } from '@/lib/attendance/rollCall'
 import { isAttendanceStatus } from '@/lib/attendance/statuses'
-import { isRealThaiDay, todayThai } from '@/lib/date/thaiDay'
+import { todayThai } from '@/lib/date/thaiDay'
 
 const MAX_ENTRIES = 100
 const MAX_NOTE_LENGTH = 500
@@ -68,11 +69,10 @@ export async function POST(request: Request): Promise<Response> {
   const { classroomId, date, entries: rawEntries } = body ?? {}
 
   if (!isId(classroomId)) return badRequest('ไม่พบห้องเรียน')
-  if (typeof date !== 'string' || !isRealThaiDay(date)) return badRequest('วันที่ไม่ถูกต้อง')
-  const today = todayThai()
-  if (date > today) return badRequest('ไม่สามารถเช็คชื่อล่วงหน้าได้')
-  // Same floor as the date picker: this calendar year and the previous one.
-  if (date.slice(0, 4) < String(Number(today.slice(0, 4)) - 1)) return badRequest('วันที่เก่าเกินไป')
+  if (typeof date !== 'string') return badRequest(ATTENDANCE_DAY_MESSAGES.invalid)
+  // Same rule the collection enforces on create; checked here for a clean 400.
+  const dateError = checkAttendanceDay(date, todayThai())
+  if (dateError) return badRequest(ATTENDANCE_DAY_MESSAGES[dateError])
   if (!Array.isArray(rawEntries) || rawEntries.length === 0 || rawEntries.length > MAX_ENTRIES) {
     return badRequest('รายการนักเรียนไม่ถูกต้อง')
   }
@@ -89,7 +89,14 @@ export async function POST(request: Request): Promise<Response> {
   if (!classrooms.some((c) => c.id === classroomId)) return forbidden()
 
   const roster = await loadRoster(req, classroomId)
-  const existing = await loadExisting(req, { date, studentIds: valid.map((e) => e.studentId) })
+  // overrideAccess: a student who moved in may have today's record under their old
+  // classroom, which this advisor can't read. It only feeds the plan's conflict
+  // check; every write below still runs with the caller's access.
+  const existing = await loadExisting(req, {
+    date,
+    overrideAccess: true,
+    studentIds: valid.map((e) => e.studentId),
+  })
   const plan = planSave({
     classroomId: classroomId,
     entries: valid,
@@ -97,6 +104,17 @@ export async function POST(request: Request): Promise<Response> {
     rosterIds: new Set(roster.map((s) => s.id)),
   })
   if (plan.outsiders.length > 0) return forbidden()
+  if (plan.conflicts.length > 0) {
+    // Conflicts are always on this roster, so the names are ones the caller can read.
+    const names = roster.filter((s) => plan.conflicts.includes(s.id)).map(fullName)
+    return NextResponse.json(
+      {
+        conflicts: plan.conflicts,
+        error: `${names.join(', ')} มีบันทึกการเช็คชื่อของวันที่เลือกแล้วในห้องเดิม — ติดต่อผู้ดูแลระบบหากต้องแก้ไข`,
+      },
+      { status: 409 },
+    )
+  }
 
   await initTransaction(req)
   try {

@@ -6,7 +6,7 @@
  */
 import type { PayloadRequest } from 'payload'
 
-import { advisorClassroomIds } from '@/access'
+import { advisorActiveClassroomIds } from '@/access'
 import { toThaiDay } from '@/lib/date/thaiDay'
 import type { Student } from '@/payload-types'
 
@@ -31,27 +31,17 @@ export interface RollCallRow {
 const relId = (v: unknown): number | null =>
   v && typeof v === 'object' ? (v as { id: number }).id : ((v as number | null | undefined) ?? null)
 
-/** The caller's assigned classrooms in the active academic year. */
+/**
+ * The caller's assigned classrooms in the active academic year — the same set the
+ * collection lets an advisor write to.
+ */
 export const listRollCallClassrooms = async (req: PayloadRequest): Promise<RollCallClassroom[]> => {
-  const assigned = await advisorClassroomIds(req)
-  if (assigned.length === 0) return []
-
-  const years = await req.payload.find({
-    collection: 'academic-years',
-    where: { isActive: { equals: true } },
-    depth: 0,
-    limit: 0,
-    pagination: false,
-    overrideAccess: false,
-    req,
-  })
-  if (years.docs.length === 0) return []
+  const writable = await advisorActiveClassroomIds(req)
+  if (writable.length === 0) return []
 
   const classrooms = await req.payload.find({
     collection: 'classrooms',
-    where: {
-      and: [{ id: { in: assigned } }, { academicYear: { in: years.docs.map((y) => y.id) } }],
-    },
+    where: { id: { in: writable } },
     sort: 'name',
     depth: 0,
     limit: 0,
@@ -82,12 +72,16 @@ export const loadRoster = async (req: PayloadRequest, classroomId: number): Prom
   return result.docs
 }
 
-/** Records the caller may read for a day, for the given students or this classroom. */
+/**
+ * Records for a day, for the given students or this classroom — those the caller may
+ * read, or all of them with `overrideAccess` (the save route needs records under a
+ * student's old classroom to detect a conflict; it never returns them).
+ */
 export const loadExisting = async (
   req: PayloadRequest,
-  args: { classroomId?: number; date: string; studentIds?: number[] },
+  args: { classroomId?: number; date: string; overrideAccess?: boolean; studentIds?: number[] },
 ): Promise<ExistingRecord[]> => {
-  const { classroomId, date, studentIds = [] } = args
+  const { classroomId, date, overrideAccess = false, studentIds = [] } = args
   const result = await req.payload.find({
     collection: 'attendance-records',
     where: {
@@ -104,7 +98,7 @@ export const loadExisting = async (
     depth: 0,
     limit: 0,
     pagination: false,
-    overrideAccess: false,
+    overrideAccess,
     req,
   })
   return result.docs.map((r) => ({
@@ -116,7 +110,7 @@ export const loadExisting = async (
   }))
 }
 
-const fullName = (s: Student): string => `${s.prefix ?? ''}${s.firstName} ${s.lastName}`.trim()
+export const fullName = (s: Student): string => `${s.prefix ?? ''}${s.firstName} ${s.lastName}`.trim()
 
 /**
  * The rows for one classroom and day, pre-filled from saved records. `savedOnly`
