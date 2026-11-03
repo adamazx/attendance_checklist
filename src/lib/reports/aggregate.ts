@@ -68,12 +68,12 @@ export const totalOf = (counts: StatusCounts): number =>
   Object.values(counts).reduce((sum, n) => sum + n, 0)
 
 /**
- * %มา = มา ÷ every record in range. A day without a record is not counted at all,
- * and สาย / ลา / ขาด / ลาออก are not มา.
+ * %มา = (มา + สาย) ÷ every record in range: arriving late still counts as attending.
+ * A day without a record is not counted at all, and ลา / ขาด / ลาออก are not มา.
  */
 export const presentRate = (counts: StatusCounts): number | null => {
   const total = totalOf(counts)
-  return total === 0 ? null : (counts.present / total) * 100
+  return total === 0 ? null : ((counts.present + counts.late) / total) * 100
 }
 
 /** `60` → `60.0%`; no records → `—`. */
@@ -124,6 +124,31 @@ export const summarizeByStudent = (
       return { counts, rate: presentRate(counts), student: find(id), total: list.length }
     })
     .sort((a, b) => compareStudents(a.student, b.student))
+}
+
+export interface DaySummary {
+  counts: StatusCounts
+  date: string
+  /** %มา for that day, as presentRate. */
+  rate: number | null
+  total: number
+}
+
+/** One row per day that has a (filtered) record, oldest first — the daily %มา trend. */
+export const summarizeByDay = (records: readonly ReportRecord[], activity: ActivityFilter = 'homeroom'): DaySummary[] => {
+  const grouped = new Map<string, ReportRecord[]>()
+  for (const r of filterByActivity(records, activity)) {
+    const list = grouped.get(r.date)
+    if (list) list.push(r)
+    else grouped.set(r.date, [r])
+  }
+
+  return [...grouped.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, list]) => {
+      const counts = countStatuses(list)
+      return { counts, date, rate: presentRate(counts), total: list.length }
+    })
 }
 
 /** The สาย records (oldest first), each student's late count (most first), and the total. */

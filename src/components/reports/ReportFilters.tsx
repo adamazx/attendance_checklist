@@ -32,9 +32,12 @@ export function ReportFilters(props: {
   path: string
   quick: QuickRange[]
   range: DateRange
+  /** false for the homeroom-only pages (stats, charts). */
+  showActivity?: boolean
   today: string
 }) {
-  const { activities, activity, classroomId, classrooms, linkParams = {}, path, quick, range, today } = props
+  const { activities, activity, classroomId, classrooms, linkParams = {}, path, quick, range, showActivity = true, today } =
+    props
   const minYear = Number(today.slice(0, 4)) - YEARS_BACK
 
   return (
@@ -42,7 +45,7 @@ export function ReportFilters(props: {
       <form className="flex flex-wrap items-end gap-3" method="get">
         <ClassroomSelect classrooms={classrooms} selectedId={classroomId} />
         {props.extra}
-        <ActivitySelect activities={activities} includeAll selected={activityParam(activity)} />
+        {showActivity && <ActivitySelect activities={activities} includeAll selected={activityParam(activity)} />}
         <fieldset>
           <legend className="font-semibold">ตั้งแต่</legend>
           <ThaiDatePicker key={range.from} minYear={minYear} name="from" today={today} value={range.from} />

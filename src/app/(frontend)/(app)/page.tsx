@@ -17,12 +17,14 @@ const studentReportTile: HomeTileProps = {
   label: 'รายงานนักเรียน',
   tone: 'blue',
 }
+const statsTile: HomeTileProps = { href: '/reports/stats', icon: '📊', label: 'สถิตินักเรียน', tone: 'blue' }
+const chartsTile: HomeTileProps = { href: '/reports/charts', icon: '📈', label: 'กราฟ', tone: 'blue' }
 
 const advisorTiles: HomeTileProps[] = [
   { href: '/attendance', icon: '📌', label: 'เช็คชื่อ', tone: 'amber' },
   classroomReportTile,
-  { comingSoon: true, icon: '📊', label: 'สถิตินักเรียน', tone: 'blue' },
-  { comingSoon: true, icon: '📈', label: 'กราฟ', tone: 'blue' },
+  statsTile,
+  chartsTile,
   { href: '/attendance/edit', icon: '✏️', label: 'แก้ไขเช็คชื่อ', tone: 'green' },
   { href: '/attendance/backdate', icon: '📝', label: 'เช็คชื่อย้อนหลัง', tone: 'blue' },
   lateReportTile,
@@ -35,6 +37,8 @@ const staffTiles: HomeTileProps[] = [
   classroomReportTile,
   studentReportTile,
   lateReportTile,
+  statsTile,
+  chartsTile,
 ]
 
 const accountTiles: HomeTileProps[] = [

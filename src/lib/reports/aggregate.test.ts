@@ -13,6 +13,7 @@ import {
   presentRate,
   type ReportRecord,
   type ReportStudent,
+  summarizeByDay,
   summarizeByStudent,
   summarizeLate,
 } from './aggregate.ts'
@@ -48,11 +49,11 @@ const fixture = [
 ]
 const students = [student(2, 2), student(1, 1), student(3, 3), student(9, null, true)]
 
-test('countStatuses + presentRate: 6 มา of 10 records is 60%', () => {
+test('countStatuses + presentRate: 6 มา + 2 สาย of 10 records is 80%', () => {
   const counts = countStatuses(fixture.filter((r) => r.studentId === 1))
   assert.deepEqual(counts, { absent: 1, late: 2, leave: 1, resigned: 0, present: 6 })
-  assert.equal(presentRate(counts), 60)
-  assert.equal(formatRate(presentRate(counts)), '60.0%')
+  assert.equal(presentRate(counts), 80)
+  assert.equal(formatRate(presentRate(counts)), '80.0%')
 })
 
 test('presentRate: no records is null, shown as a dash', () => {
@@ -71,7 +72,7 @@ test('summarizeByStudent: every roster student gets a row, ordered by class numb
       [9, 1],
     ],
   )
-  assert.equal(rows[1]?.rate, 0) // สาย and ลาออก are not มา
+  assert.equal(rows[1]?.rate, 50) // สาย counts as มา, ลาออก does not
   assert.equal(rows[2]?.rate, null) // no record in range: not counted
 })
 
@@ -116,7 +117,7 @@ const withActivities = [
 test('activity filter: the default is homeroom only, so daily rates ignore activity records', () => {
   const rows = summarizeByStudent(withActivities, students)
   assert.equal(rows[0]?.total, 10)
-  assert.equal(rows[0]?.rate, 60)
+  assert.equal(rows[0]?.rate, 80)
   assert.equal(summarizeLate(withActivities, students).total, 4)
 })
 
@@ -133,4 +134,21 @@ test('activity filter: all = homeroom + every activity', () => {
   assert.equal(rows[0]?.total, 13)
   assert.equal(summarizeLate(withActivities, students, 'all').total, 5)
   assert.equal(filterByActivity(withActivities, 'homeroom').length, fixture.length)
+})
+
+test('summarizeByDay: homeroom days oldest first, adding up to the whole range', () => {
+  const byDay = summarizeByDay([...withActivities].reverse())
+  assert.deepEqual(byDay.map((d) => d.date), days(10))
+  assert.deepEqual(
+    byDay.slice(0, 3).map((d) => [d.total, d.rate]),
+    [
+      [2, 100], // มา + สาย
+      [2, 50], // มา + ลาออก
+      [2, 100], // สาย + สาย
+    ],
+  )
+  const summed = countStatuses([])
+  for (const d of byDay) for (const s of Object.keys(summed) as AttendanceStatus[]) summed[s] += d.counts[s]
+  assert.deepEqual(summed, countStatuses(filterByActivity(withActivities, 'homeroom')))
+  assert.deepEqual(summarizeByDay([]), [])
 })

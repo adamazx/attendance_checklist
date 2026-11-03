@@ -102,6 +102,12 @@ export const formatThaiDayShort = (day: string): string => {
   return `${d} ${THAI_MONTHS_SHORT[m - 1]} ${y + BE_OFFSET}`
 }
 
+/** `2026-11-02` → `2 พ.ย.` (a chart axis tick, where the year is in the heading). */
+export const formatThaiDayMonth = (day: string): string => {
+  const [, m, d] = parts(day)
+  return `${d} ${THAI_MONTHS_SHORT[m - 1]}`
+}
+
 /** `2026-11-02` → `วันจันทร์ที่ 2 พฤศจิกายน 2569`. */
 export const formatThaiDayLong = (day: string): string => {
   const [y, m, d] = parts(day)
