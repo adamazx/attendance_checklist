@@ -12,6 +12,7 @@ import {
   activityFilterLabel,
   formatRange,
   numClass,
+  rateFootnote,
   tableClass,
   tdClass,
   thClass,
@@ -122,11 +123,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
               </tr>
             </tfoot>
           </table>
-          <p className="mt-2 text-xs text-muted">
-            {activity === 'all'
-              ? '%มา = จำนวนครั้งที่ “มา” ÷ จำนวนครั้งที่มีการบันทึก (รวมโฮมรูมและทุกวิชา/กิจกรรม)'
-              : '%มา = จำนวนวันที่ “มา” ÷ จำนวนวันที่มีการบันทึกในช่วงวันที่เลือก (วันที่ไม่มีการบันทึกไม่นับ)'}
-          </p>
+          <p className="mt-2 text-xs text-muted">{rateFootnote(activity)}</p>
         </div>
       )}
     </div>

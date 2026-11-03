@@ -6,7 +6,7 @@ import { listActivities, type RollCallActivity } from '@/lib/attendance/rollCall
 import { requireUser } from '@/lib/auth/currentUser'
 import { todayThai } from '@/lib/date/thaiDay'
 import type { ActivityFilter } from '@/lib/reports/aggregate'
-import { parseRange, quickRanges } from '@/lib/reports/dateRange'
+import { parseRange, quickRanges, type RangeNotice } from '@/lib/reports/dateRange'
 import { listReportClassrooms, loadActiveTerm } from '@/lib/reports/queries'
 
 export type ReportSearchParams = Promise<{
@@ -37,9 +37,10 @@ export const activityLinkParams = (filter: ActivityFilter): Record<string, strin
  * What every report page needs: the signed-in user's request, the classrooms they
  * may report on, the chosen one (a classroom outside that list falls back to the
  * first), the resolved date range, and the activity filter (homeroom by default).
- * Each page calls this itself, so each page runs requireUser().
+ * Each page calls this itself, so each page runs requireUser(). With
+ * `defaultRange: 'term'`, a request without from/to shows เทอมนี้ (when there is one).
  */
-export async function loadReportContext(searchParams: ReportSearchParams) {
+export async function loadReportContext(searchParams: ReportSearchParams, options: { defaultRange?: 'term' } = {}) {
   const user = await requireUser()
   const params = await searchParams
   const payload = await getPayload({ config })
@@ -51,7 +52,13 @@ export async function loadReportContext(searchParams: ReportSearchParams) {
   ])
 
   const today = todayThai()
-  const range = parseRange({ from: one(params.from), to: one(params.to) }, today)
+  const quick = quickRanges(today, activeTerm)
+  const requested = { from: one(params.from), to: one(params.to) }
+  const term = quick.find((q) => q.key === 'term')
+  const range =
+    options.defaultRange === 'term' && term && requested.from === undefined && requested.to === undefined
+      ? { from: term.from, notices: [] as RangeNotice[], to: term.to }
+      : parseRange(requested, today)
   const classroom = classrooms.find((c) => String(c.id) === one(params.classroom)) ?? classrooms[0] ?? null
   const activity = parseActivity(one(params.activity), activities)
   const activityName = new Map(activities.map((a) => [a.id, a.name]))
@@ -63,7 +70,7 @@ export async function loadReportContext(searchParams: ReportSearchParams) {
     classroom,
     classrooms,
     params,
-    quick: quickRanges(today, activeTerm),
+    quick,
     range,
     req,
     today,

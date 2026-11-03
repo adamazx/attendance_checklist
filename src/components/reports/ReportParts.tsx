@@ -73,5 +73,11 @@ export const activityFilterLabel = (filter: ActivityFilter, names: ReadonlyMap<n
  */
 export const totalLabel = (filter: ActivityFilter): string => (filter === 'all' ? 'รวม (ครั้ง)' : 'รวมวัน')
 
+/** How %มา is computed (see aggregate's presentRate), as a footnote for the filter. */
+export const rateFootnote = (filter: ActivityFilter): string =>
+  filter === 'all'
+    ? '%มา = จำนวนครั้งที่ “มา” หรือ “สาย” ÷ จำนวนครั้งที่มีการบันทึก (รวมโฮมรูมและทุกวิชา/กิจกรรม)'
+    : '%มา = จำนวนวันที่ “มา” หรือ “สาย” ÷ จำนวนวันที่มีการบันทึกในช่วงวันที่เลือก (วันที่ไม่มีการบันทึกไม่นับ)'
+
 /** Shown beside a student who is no longer studying in the report's classroom. */
 export const DepartedTag = () => <span className="ml-1.5 text-xs text-muted">(ย้าย/ออก)</span>
