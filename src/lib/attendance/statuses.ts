@@ -34,8 +34,8 @@ export const ATTENDANCE_STATUSES: ReadonlyArray<{
     checkedClass: 'peer-checked:bg-action-danger peer-checked:text-on-dark',
   },
   {
-    value: 'left_early',
-    label: 'ออกก่อน',
+    value: 'resigned',
+    label: 'ลาออก',
     badgeClass: 'bg-action-neutral text-on-dark',
     checkedClass: 'peer-checked:bg-action-neutral peer-checked:text-on-dark',
   },

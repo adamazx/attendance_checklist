@@ -3,6 +3,7 @@ import React from 'react'
 
 import { statusInfo, type AttendanceStatus } from '@/lib/attendance/statuses'
 import { formatThaiDay } from '@/lib/date/thaiDay'
+import type { ActivityFilter } from '@/lib/reports/aggregate'
 import type { DateRange, RangeNotice } from '@/lib/reports/dateRange'
 import { RANGE_NOTICE_MESSAGES } from '@/lib/reports/dateRange'
 
@@ -57,6 +58,20 @@ export function StatusBadge(props: { status: AttendanceStatus }) {
     </span>
   )
 }
+
+/** A record's activity for a table cell: its name, or the homeroom. */
+export const recordActivityName = (activityId: number | null, names: ReadonlyMap<number, string>): string =>
+  activityId === null ? 'โฮมรูม' : (names.get(activityId) ?? '—')
+
+/** The filter for the report heading. */
+export const activityFilterLabel = (filter: ActivityFilter, names: ReadonlyMap<number, string>): string =>
+  filter === 'homeroom' ? 'เช็คชื่อประจำวัน' : filter === 'all' ? 'ทุกกิจกรรม' : (names.get(filter) ?? '—')
+
+/**
+ * Header for a record total. Only "all" can hold several records per student per
+ * day, so its totals are times (ครั้ง), not days.
+ */
+export const totalLabel = (filter: ActivityFilter): string => (filter === 'all' ? 'รวม (ครั้ง)' : 'รวมวัน')
 
 /** Shown beside a student who is no longer studying in the report's classroom. */
 export const DepartedTag = () => <span className="ml-1.5 text-xs text-muted">(ย้าย/ออก)</span>

@@ -1,5 +1,6 @@
 // Storage of all dates is ISO/UTC; the UI layer renders them in Buddhist-era (พ.ศ.) with Thai month names.
-import { postgresAdapter } from '@payloadcms/db-postgres'
+import { postgresAdapter, sql } from '@payloadcms/db-postgres'
+import { uniqueIndex } from '@payloadcms/db-postgres/drizzle/pg-core'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { en } from '@payloadcms/translations/languages/en'
 import { th } from '@payloadcms/translations/languages/th'
@@ -9,6 +10,7 @@ import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
 import { AcademicYear } from './collections/AcademicYear'
+import { Activity } from './collections/Activity'
 import { AttendanceRecord } from './collections/AttendanceRecord'
 import { AuditLog } from './collections/AuditLog'
 import { Classroom } from './collections/Classroom'
@@ -61,7 +63,8 @@ export default buildConfig({
   },
   // Phase 1 master data (Teacher modeled as fields on Users) + Phase 2 daily
   // attendance layer: AttendanceRecord (audited) and the append-only AuditLog.
-  collections: [Users, AcademicYear, Term, Classroom, Student, AttendanceRecord, AuditLog],
+  // Activity is the optional subject/activity an attendance record is taken under.
+  collections: [Users, AcademicYear, Term, Activity, Classroom, Student, AttendanceRecord, AuditLog],
   // The app uses REST and the Local API only. GraphQL also can't build its schema:
   // the Thai Student.prefix option values aren't valid GraphQL enum names.
   graphQL: { disable: true },
@@ -71,6 +74,30 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: postgresAdapter({
+    // Schema changes ship as migrations in src/migrations (run `pnpm payload migrate`),
+    // never dev push — so the local DB and Neon follow the same path.
+    push: false,
+    migrationDir: path.resolve(dirname, 'migrations'),
+    // One attendance record per student per day per activity: homeroom (no activity)
+    // and each activity are unique separately. Declared here, not as collection
+    // `indexes`, because Payload can't express partial indexes; keeping them in the
+    // Drizzle schema lets `migrate:create` see them.
+    afterSchemaInit: [
+      ({ schema, extendTable }) => {
+        extendTable({
+          table: schema.tables.attendance_records,
+          extraConfig: (t) => ({
+            homeroomUnique: uniqueIndex('attendance_records_student_date_homeroom_idx')
+              .on(t.student, t.date)
+              .where(sql`${t.activity} IS NULL`),
+            activityUnique: uniqueIndex('attendance_records_student_date_activity_idx')
+              .on(t.student, t.date, t.activity)
+              .where(sql`${t.activity} IS NOT NULL`),
+          }),
+        })
+        return schema
+      },
+    ],
     pool: {
       connectionString: process.env.DATABASE_URI || '',
     },

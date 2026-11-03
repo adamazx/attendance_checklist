@@ -16,8 +16,14 @@ const toolClass =
 const snapshot = (rows: RollCallRow[]): Record<number, Row> =>
   Object.fromEntries(rows.map((r) => [r.studentId, { note: r.note, status: r.status }]))
 
-export function RollCallTable(props: { classroomId: number; date: string; rows: RollCallRow[] }) {
-  const { classroomId, date, rows } = props
+export function RollCallTable(props: {
+  /** null = the daily homeroom roll-call. */
+  activityId: number | null
+  classroomId: number
+  date: string
+  rows: RollCallRow[]
+}) {
+  const { activityId, classroomId, date, rows } = props
   const router = useRouter()
   const [values, setValues] = useState(() => snapshot(rows))
   const [saved, setSaved] = useState(values)
@@ -63,6 +69,7 @@ export function RollCallTable(props: { classroomId: number; date: string; rows: 
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          activityId,
           classroomId,
           date,
           entries: rows.map((r) => ({

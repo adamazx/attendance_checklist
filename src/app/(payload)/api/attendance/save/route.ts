@@ -1,7 +1,9 @@
 /**
  * POST /api/attendance/save — bulk roll-call upsert for one classroom and day.
  *
- * Body: `{ classroomId, date, entries: [{ studentId, status, note }] }`.
+ * Body: `{ classroomId, date, activityId?, entries: [{ studentId, status, note }] }`.
+ * `activityId` absent/null = the daily homeroom roll-call; otherwise the records are
+ * for that subject/activity (one per student per day per activity).
  * Returns `{ created, updated, unchanged }`.
  *
  * All writes share one transaction, so a save lands whole or not at all. They go
@@ -39,7 +41,9 @@ const MAX_ID = 2147483647
 const isId = (value: unknown): value is number =>
   Number.isInteger(value) && (value as number) > 0 && (value as number) <= MAX_ID
 
-const badRequest = (error: string) => NextResponse.json({ error }, { status: 400 })
+const ACTIVITY_NOT_FOUND = 'ไม่พบวิชา/กิจกรรม'
+
+const badRequest =(error: string) => NextResponse.json({ error }, { status: 400 })
 const forbidden = () => NextResponse.json({ error: 'ไม่มีสิทธิ์บันทึกข้อมูลของห้องนี้' }, { status: 403 })
 
 /** Validate one raw row; null when malformed. */
@@ -62,13 +66,16 @@ export async function POST(request: Request): Promise<Response> {
   if (isDiscipline(user)) return forbidden()
 
   const body = (await request.json().catch(() => null)) as {
+    activityId?: unknown
     classroomId?: unknown
     date?: unknown
     entries?: unknown
   } | null
-  const { classroomId, date, entries: rawEntries } = body ?? {}
+  const { activityId: rawActivityId, classroomId, date, entries: rawEntries } = body ?? {}
 
   if (!isId(classroomId)) return badRequest('ไม่พบห้องเรียน')
+  if (rawActivityId != null && !isId(rawActivityId)) return badRequest(ACTIVITY_NOT_FOUND)
+  const activityId = rawActivityId ?? null
   if (typeof date !== 'string') return badRequest(ATTENDANCE_DAY_MESSAGES.invalid)
   // Same rule the collection enforces on create; checked here for a clean 400.
   const dateError = checkAttendanceDay(date, todayThai())
@@ -87,12 +94,22 @@ export async function POST(request: Request): Promise<Response> {
   const req = await createLocalReq({ user }, payload)
   const classrooms = await listRollCallClassrooms(req)
   if (!classrooms.some((c) => c.id === classroomId)) return forbidden()
+  if (activityId !== null) {
+    const found = await payload.count({
+      collection: 'activities',
+      where: { id: { equals: activityId } },
+      overrideAccess: false,
+      req,
+    })
+    if (found.totalDocs === 0) return badRequest(ACTIVITY_NOT_FOUND)
+  }
 
   const roster = await loadRoster(req, classroomId)
   // overrideAccess: a student who moved in may have today's record under their old
   // classroom, which this advisor can't read. It only feeds the plan's conflict
   // check; every write below still runs with the caller's access.
   const existing = await loadExisting(req, {
+    activityId,
     date,
     overrideAccess: true,
     studentIds: valid.map((e) => e.studentId),
@@ -121,7 +138,7 @@ export async function POST(request: Request): Promise<Response> {
     for (const entry of plan.creates) {
       await payload.create({
         collection: 'attendance-records',
-        data: { date, note: entry.note || null, status: entry.status, student: entry.studentId },
+        data: { activity: activityId, date, note: entry.note || null, status: entry.status, student: entry.studentId },
         overrideAccess: false,
         req,
       })

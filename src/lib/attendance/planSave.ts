@@ -7,11 +7,14 @@
  * have a record snapshotted to this classroom (a student who left since). Anyone
  * else is an outsider, and the caller must reject the whole save.
  *
+ * A save is for one activity (or the daily homeroom), and `existing` must hold only
+ * that activity's records: there is one record per student per day per activity.
+ *
  * A roster student who already has a record that day under another classroom (they
- * moved in after being recorded in their old room) is a conflict: there is one
- * record per student per day, and it belongs to the old classroom's snapshot, so
- * this classroom may neither create a second one nor edit that one. `existing`
- * must therefore include such records even when the caller can't read them.
+ * moved in after being recorded in their old room) is a conflict: that record
+ * belongs to the old classroom's snapshot, so this classroom may neither create a
+ * second one nor edit that one. `existing` must therefore include such records even
+ * when the caller can't read them.
  */
 import type { AttendanceStatus } from './statuses'
 

@@ -103,7 +103,9 @@ export const loadRangeRecords = async (
   const result = await req.payload.find({
     collection: 'attendance-records',
     where: { and },
-    select: { classroom: true, date: true, note: true, status: true, student: true },
+    // Every activity is loaded (the range is bounded); reports narrow with aggregate's
+    // ActivityFilter, so pickers built from these records still see everyone.
+    select: { activity: true, classroom: true, date: true, note: true, status: true, student: true },
     sort: 'date',
     depth: 0,
     limit: 0,
@@ -112,6 +114,7 @@ export const loadRangeRecords = async (
     req,
   })
   return result.docs.map((r) => ({
+    activityId: relId(r.activity),
     classroomId: relId(r.classroom),
     date: r.date,
     id: r.id,

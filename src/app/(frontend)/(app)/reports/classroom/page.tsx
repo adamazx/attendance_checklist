@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import React from 'react'
 
-import { loadReportContext, type ReportSearchParams } from '@/components/reports/loadReportContext'
+import { activityLinkParams, loadReportContext, type ReportSearchParams } from '@/components/reports/loadReportContext'
 import { ReportFilters } from '@/components/reports/ReportFilters'
 import {
   DepartedTag,
@@ -9,14 +9,16 @@ import {
   NoClassrooms,
   RangeNotices,
   ReportHeading,
+  activityFilterLabel,
   formatRange,
   numClass,
   tableClass,
   tdClass,
   thClass,
+  totalLabel,
 } from '@/components/reports/ReportParts'
 import { ATTENDANCE_STATUSES } from '@/lib/attendance/statuses'
-import { countStatuses, formatRate, presentRate, summarizeByStudent } from '@/lib/reports/aggregate'
+import { countStatuses, filterByActivity, formatRate, presentRate, summarizeByStudent } from '@/lib/reports/aggregate'
 import { loadRangeRecords, loadReportStudents } from '@/lib/reports/queries'
 
 export const metadata = { title: 'รายงานรายห้อง | ระบบครูที่ปรึกษา' }
@@ -24,7 +26,8 @@ export const metadata = { title: 'รายงานรายห้อง | ร�
 const TITLE = 'รายงานรายห้อง'
 
 export default async function Page(props: { searchParams: ReportSearchParams }) {
-  const { classroom, classrooms, quick, range, req, today } = await loadReportContext(props.searchParams)
+  const { activities, activity, activityName, classroom, classrooms, quick, range, req, today } =
+    await loadReportContext(props.searchParams)
   if (!classroom) {
     return (
       <div className="mt-6">
@@ -34,23 +37,27 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
     )
   }
 
-  const records = await loadRangeRecords(req, { classroomId: classroom.id, from: range.from, to: range.to })
+  const allRecords = await loadRangeRecords(req, { classroomId: classroom.id, from: range.from, to: range.to })
   const students = await loadReportStudents(
     req,
     classroom.id,
-    records.map((r) => r.studentId),
+    allRecords.map((r) => r.studentId),
   )
-  const rows = summarizeByStudent(records, students)
+  const records = filterByActivity(allRecords, activity)
+  const rows = summarizeByStudent(allRecords, students, activity)
   const totals = countStatuses(records)
   const studentLink = (studentId: number) =>
-    `/reports/student?${new URLSearchParams({ classroom: String(classroom.id), from: range.from, student: String(studentId), to: range.to })}`
+    `/reports/student?${new URLSearchParams({ classroom: String(classroom.id), ...activityLinkParams(activity), from: range.from, student: String(studentId), to: range.to })}`
 
   return (
     <div className="mt-6">
       <ReportHeading title={TITLE}>
-        <span className="font-semibold">ห้อง {classroom.name}</span> · {formatRange(range)}
+        <span className="font-semibold">ห้อง {classroom.name}</span> · {activityFilterLabel(activity, activityName)} ·{' '}
+        {formatRange(range)}
       </ReportHeading>
       <ReportFilters
+        activities={activities}
+        activity={activity}
         classroomId={classroom.id}
         classrooms={classrooms}
         path="/reports/classroom"
@@ -75,7 +82,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                     {s.label}
                   </th>
                 ))}
-                <th className={`${thClass} ${numClass}`}>รวมวัน</th>
+                <th className={`${thClass} ${numClass}`}>{totalLabel(activity)}</th>
                 <th className={`${thClass} ${numClass}`}>%มา</th>
               </tr>
             </thead>
@@ -116,7 +123,9 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
             </tfoot>
           </table>
           <p className="mt-2 text-xs text-muted">
-            %มา = จำนวนวันที่ “มา” ÷ จำนวนวันที่มีการบันทึกในช่วงวันที่เลือก (วันที่ไม่มีการบันทึกไม่นับ)
+            {activity === 'all'
+              ? '%มา = จำนวนครั้งที่ “มา” ÷ จำนวนครั้งที่มีการบันทึก (รวมโฮมรูมและทุกวิชา/กิจกรรม)'
+              : '%มา = จำนวนวันที่ “มา” ÷ จำนวนวันที่มีการบันทึกในช่วงวันที่เลือก (วันที่ไม่มีการบันทึกไม่นับ)'}
           </p>
         </div>
       )}

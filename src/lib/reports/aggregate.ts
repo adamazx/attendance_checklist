@@ -6,6 +6,8 @@
 import { ATTENDANCE_STATUSES, type AttendanceStatus } from '../attendance/statuses.ts'
 
 export interface ReportRecord {
+  /** null = the daily homeroom roll-call. */
+  activityId: number | null
   classroomId: number | null
   date: string
   id: number
@@ -24,6 +26,20 @@ export interface ReportStudent {
 }
 
 export type StatusCounts = Record<AttendanceStatus, number>
+
+/**
+ * Which records a report covers: the daily homeroom (the default — one record per
+ * student per day, so %มา stays a daily rate), one activity by id, or everything.
+ */
+export type ActivityFilter = 'all' | 'homeroom' | number
+
+export const matchesActivity = (record: Pick<ReportRecord, 'activityId'>, filter: ActivityFilter): boolean =>
+  filter === 'all' ? true : filter === 'homeroom' ? record.activityId === null : record.activityId === filter
+
+export const filterByActivity = <T extends Pick<ReportRecord, 'activityId'>>(
+  records: readonly T[],
+  filter: ActivityFilter,
+): T[] => records.filter((r) => matchesActivity(r, filter))
 
 export interface StudentSummary {
   counts: StatusCounts
@@ -53,7 +69,7 @@ export const totalOf = (counts: StatusCounts): number =>
 
 /**
  * %มา = มา ÷ every record in range. A day without a record is not counted at all,
- * and สาย / ลา / ขาด / ออกก่อน are not มา.
+ * and สาย / ลา / ขาด / ลาออก are not มา.
  */
 export const presentRate = (counts: StatusCounts): number | null => {
   const total = totalOf(counts)
@@ -87,15 +103,16 @@ const studentLookup = (students: readonly ReportStudent[]) => {
 
 /**
  * One row per student: every given student (a roster student with no record in
- * range gets zeros), plus anyone who only appears in the records.
+ * range gets zeros), plus anyone who only appears in the (filtered) records.
  */
 export const summarizeByStudent = (
   records: readonly ReportRecord[],
   students: readonly ReportStudent[],
+  activity: ActivityFilter = 'homeroom',
 ): StudentSummary[] => {
   const find = studentLookup(students)
   const grouped = new Map<number, ReportRecord[]>(students.map((s) => [s.id, []]))
-  for (const r of records) {
+  for (const r of filterByActivity(records, activity)) {
     const list = grouped.get(r.studentId)
     if (list) list.push(r)
     else grouped.set(r.studentId, [r])
@@ -113,9 +130,10 @@ export const summarizeByStudent = (
 export const summarizeLate = (
   records: readonly ReportRecord[],
   students: readonly ReportStudent[],
+  activity: ActivityFilter = 'homeroom',
 ): LateSummary => {
   const find = studentLookup(students)
-  const late = records.filter((r) => r.status === 'late')
+  const late = filterByActivity(records, activity).filter((r) => r.status === 'late')
 
   const counts = new Map<number, number>()
   for (const r of late) counts.set(r.studentId, (counts.get(r.studentId) ?? 0) + 1)

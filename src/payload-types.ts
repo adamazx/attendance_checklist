@@ -70,6 +70,7 @@ export interface Config {
     users: User;
     'academic-years': AcademicYear;
     terms: Term;
+    activities: Activity;
     classrooms: Classroom;
     students: Student;
     'attendance-records': AttendanceRecord;
@@ -84,6 +85,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     'academic-years': AcademicYearsSelect<false> | AcademicYearsSelect<true>;
     terms: TermsSelect<false> | TermsSelect<true>;
+    activities: ActivitiesSelect<false> | ActivitiesSelect<true>;
     classrooms: ClassroomsSelect<false> | ClassroomsSelect<true>;
     students: StudentsSelect<false> | StudentsSelect<true>;
     'attendance-records': AttendanceRecordsSelect<false> | AttendanceRecordsSelect<true>;
@@ -185,6 +187,18 @@ export interface Term {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activities".
+ */
+export interface Activity {
+  id: number;
+  type: 'subject' | 'activity';
+  name: string;
+  description?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "classrooms".
  */
 export interface Classroom {
@@ -234,9 +248,13 @@ export interface AttendanceRecord {
    */
   date: string;
   /**
-   * สถานะปรับเพิ่มได้ภายหลัง
+   * เว้นว่าง = เช็คชื่อประจำวัน (โฮมรูม)
    */
-  status: 'present' | 'late' | 'leave' | 'absent' | 'left_early';
+  activity?: (number | null) | Activity;
+  /**
+   * ลาออก = สิ้นสภาพนักศึกษา (บันทึกรายวันเท่านั้น ไม่เปลี่ยนสถานะนักเรียน)
+   */
+  status: 'present' | 'late' | 'leave' | 'absent' | 'resigned';
   note?: string | null;
   /**
    * บันทึกอัตโนมัติจากห้องของนักเรียน ณ เวลาที่เช็คชื่อ
@@ -316,6 +334,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'terms';
         value: number | Term;
+      } | null)
+    | ({
+        relationTo: 'activities';
+        value: number | Activity;
       } | null)
     | ({
         relationTo: 'classrooms';
@@ -425,6 +447,17 @@ export interface TermsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activities_select".
+ */
+export interface ActivitiesSelect<T extends boolean = true> {
+  type?: T;
+  name?: T;
+  description?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "classrooms_select".
  */
 export interface ClassroomsSelect<T extends boolean = true> {
@@ -458,6 +491,7 @@ export interface StudentsSelect<T extends boolean = true> {
 export interface AttendanceRecordsSelect<T extends boolean = true> {
   student?: T;
   date?: T;
+  activity?: T;
   status?: T;
   note?: T;
   classroom?: T;

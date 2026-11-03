@@ -6,16 +6,22 @@ import React from 'react'
 
 import { isDiscipline } from '@/access'
 import { requireUser } from '@/lib/auth/currentUser'
-import { isDayInTerm, listRollCallClassrooms, loadRollCallRows } from '@/lib/attendance/rollCall'
+import { isDayInTerm, listActivities, listRollCallClassrooms, loadRollCallRows } from '@/lib/attendance/rollCall'
 import { formatThaiDayLong, isRealThaiDay, shiftThaiDay, todayThai } from '@/lib/date/thaiDay'
 
+import { ActivitySelect } from './ActivitySelect'
 import { ClassroomSelect } from './ClassroomSelect'
 import { RollCallTable } from './RollCallTable'
 import { ThaiDatePicker } from './ThaiDatePicker'
 
 export type AttendanceMode = 'today' | 'backdate' | 'edit'
 
-export type AttendanceSearchParams = Promise<{ classroom?: string | string[]; date?: string | string[] }>
+/** Shared by all three modes (today / backdate / edit); `activity` absent = homeroom. */
+export type AttendanceSearchParams = Promise<{
+  activity?: string | string[]
+  classroom?: string | string[]
+  date?: string | string[]
+}>
 
 const titles: Record<AttendanceMode, string> = {
   backdate: 'เช็คชื่อย้อนหลัง',
@@ -69,25 +75,39 @@ export async function AttendancePage(props: { mode: AttendanceMode; searchParams
   const requested = typeof params.date === 'string' ? params.date : undefined
   const { date, rejected } = resolveDate(mode, requested, today)
 
+  // No activity (or an unknown one) = the daily homeroom roll-call.
+  const activities = await listActivities(req)
+  const requestedActivity = typeof params.activity === 'string' ? params.activity : ''
+  const activity = activities.find((a) => String(a.id) === requestedActivity) ?? null
+  const activityId = activity?.id ?? null
+
   const rows = await loadRollCallRows(req, {
+    activityId,
     classroomId: classroom.id,
     date,
     savedOnly: mode === 'edit',
   })
   const hasSaved = rows.some((r) => r.status !== null)
   const inTerm = await isDayInTerm(req, classroom.academicYearId, date)
-  const showFilters = mode !== 'today' || classrooms.length > 1
+  const showFilters = mode !== 'today' || classrooms.length > 1 || activities.length > 0
+  const backdateQuery = new URLSearchParams({
+    classroom: String(classroom.id),
+    date,
+    ...(activityId !== null && { activity: String(activityId) }),
+  })
 
   return (
     <div className="mt-6">
       {heading}
       <p className="mt-1 mb-4">
-        <span className="font-semibold">ห้อง {classroom.name}</span> · {formatThaiDayLong(date)}
+        <span className="font-semibold">ห้อง {classroom.name}</span> · {activity ? activity.name : 'เช็คชื่อประจำวัน'}{' '}
+        · {formatThaiDayLong(date)}
       </p>
 
       {showFilters && (
         <form className="mb-4 flex flex-wrap items-end gap-3 rounded-xl bg-surface p-3 shadow-card" method="get">
           <ClassroomSelect classrooms={classrooms} selectedId={classroom.id} />
+          <ActivitySelect activities={activities} selected={activityId === null ? '' : String(activityId)} />
           {mode !== 'today' && <ThaiDatePicker key={date} name="date" today={today} value={date} />}
           <button
             className="min-h-11 cursor-pointer rounded-lg border border-brand-gold bg-surface px-4 font-semibold text-brand-red-dark hover:bg-gold-pale"
@@ -105,15 +125,24 @@ export async function AttendancePage(props: { mode: AttendanceMode; searchParams
             : 'เลือกวันในอนาคตไม่ได้ ระบบจึงแสดงวันนี้แทน'}
         </Notice>
       )}
-      {!inTerm && <Notice>ไม่พบภาคเรียนที่ครอบคลุมวันที่เลือก บันทึกได้ แต่จะไม่ถูกผูกกับภาคเรียน</Notice>}
+      {requestedActivity !== '' && !activity && (
+        <Notice>ไม่พบวิชา/กิจกรรมที่เลือก ระบบจึงแสดงการเช็คชื่อประจำวันแทน</Notice>
+      )}
+      {!inTerm &&<Notice>ไม่พบภาคเรียนที่ครอบคลุมวันที่เลือก บันทึกได้ แต่จะไม่ถูกผูกกับภาคเรียน</Notice>}
       {hasSaved && mode !== 'edit' && <Notice>มีข้อมูลบันทึกไว้แล้ว การบันทึกจะแก้ไขข้อมูลเดิม</Notice>}
 
       {rows.length > 0 ? (
-        <RollCallTable classroomId={classroom.id} date={date} key={`${classroom.id}-${date}`} rows={rows} />
+        <RollCallTable
+          activityId={activityId}
+          classroomId={classroom.id}
+          date={date}
+          key={`${classroom.id}-${date}-${activityId ?? 'homeroom'}`}
+          rows={rows}
+        />
       ) : mode === 'edit' ? (
         <p>
           ยังไม่มีข้อมูลเช็คชื่อของวันที่เลือก{' '}
-          <Link className="text-brand-red-dark" href="/attendance/backdate">
+          <Link className="text-brand-red-dark" href={`/attendance/backdate?${backdateQuery}`}>
             ไปเช็คชื่อย้อนหลัง
           </Link>
         </p>

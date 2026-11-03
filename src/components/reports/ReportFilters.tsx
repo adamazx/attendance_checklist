@@ -1,9 +1,14 @@
 import Link from 'next/link'
 import React from 'react'
 
+import { ActivitySelect } from '@/components/attendance/ActivitySelect'
 import { ClassroomSelect } from '@/components/attendance/ClassroomSelect'
 import { ThaiDatePicker } from '@/components/attendance/ThaiDatePicker'
+import type { RollCallActivity } from '@/lib/attendance/rollCall'
+import type { ActivityFilter } from '@/lib/reports/aggregate'
 import type { DateRange, QuickRange } from '@/lib/reports/dateRange'
+
+import { activityLinkParams, activityParam } from './loadReportContext'
 import type { ReportClassroom } from '@/lib/reports/queries'
 
 /** How many years back the พ.ศ. dropdown reaches, for history reports. */
@@ -12,11 +17,14 @@ const YEARS_BACK = 5
 const quickClass = 'rounded-full border border-brand-gold px-3 py-1 text-sm font-medium no-underline'
 
 /**
- * The GET filter form shared by the report pages: classroom, a from/to date range,
- * optional extra fields (the student choice), and quick-range links that keep the
- * current classroom (and `linkParams`) and swap only the range.
+ * The GET filter form shared by the report pages: classroom, optional extra fields
+ * (the student choice), the activity filter, a from/to date range, and quick-range
+ * links that keep the current classroom, activity (and `linkParams`) and swap only
+ * the range.
  */
 export function ReportFilters(props: {
+  activities: RollCallActivity[]
+  activity: ActivityFilter
   classroomId: number
   classrooms: ReportClassroom[]
   extra?: React.ReactNode
@@ -26,7 +34,7 @@ export function ReportFilters(props: {
   range: DateRange
   today: string
 }) {
-  const { classroomId, classrooms, linkParams = {}, path, quick, range, today } = props
+  const { activities, activity, classroomId, classrooms, linkParams = {}, path, quick, range, today } = props
   const minYear = Number(today.slice(0, 4)) - YEARS_BACK
 
   return (
@@ -34,6 +42,7 @@ export function ReportFilters(props: {
       <form className="flex flex-wrap items-end gap-3" method="get">
         <ClassroomSelect classrooms={classrooms} selectedId={classroomId} />
         {props.extra}
+        <ActivitySelect activities={activities} includeAll selected={activityParam(activity)} />
         <fieldset>
           <legend className="font-semibold">ตั้งแต่</legend>
           <ThaiDatePicker key={range.from} minYear={minYear} name="from" today={today} value={range.from} />
@@ -53,7 +62,13 @@ export function ReportFilters(props: {
         <span className="text-sm text-muted">ช่วงด่วน:</span>
         {quick.map((q) => {
           const active = q.from === range.from && q.to === range.to
-          const query = new URLSearchParams({ classroom: String(classroomId), ...linkParams, from: q.from, to: q.to })
+          const query = new URLSearchParams({
+            classroom: String(classroomId),
+            ...activityLinkParams(activity),
+            ...linkParams,
+            from: q.from,
+            to: q.to,
+          })
           return (
             <Link
               aria-current={active ? 'true' : undefined}

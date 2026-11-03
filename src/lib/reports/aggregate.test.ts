@@ -8,6 +8,7 @@ import { test } from 'node:test'
 import type { AttendanceStatus } from '../attendance/statuses.ts'
 import {
   countStatuses,
+  filterByActivity,
   formatRate,
   presentRate,
   type ReportRecord,
@@ -25,7 +26,8 @@ const student = (id: number, classNumber: number | null, departed = false): Repo
 })
 
 let nextId = 1
-const rec = (studentId: number, date: string, status: AttendanceStatus): ReportRecord => ({
+const rec = (studentId: number, date: string, status: AttendanceStatus, activityId: number | null = null): ReportRecord => ({
+  activityId,
   classroomId: 1,
   date,
   id: nextId++,
@@ -41,14 +43,14 @@ const S1: AttendanceStatus[] = ['present', 'present', 'late', 'present', 'leave'
 const fixture = [
   ...days(10).map((d, i) => rec(1, d, S1[i] as AttendanceStatus)),
   rec(2, '2026-10-01', 'late'),
-  rec(2, '2026-10-02', 'left_early'),
+  rec(2, '2026-10-02', 'resigned'),
   rec(9, '2026-10-03', 'late'), // departed student, recorded while in this classroom
 ]
 const students = [student(2, 2), student(1, 1), student(3, 3), student(9, null, true)]
 
 test('countStatuses + presentRate: 6 มา of 10 records is 60%', () => {
   const counts = countStatuses(fixture.filter((r) => r.studentId === 1))
-  assert.deepEqual(counts, { absent: 1, late: 2, leave: 1, left_early: 0, present: 6 })
+  assert.deepEqual(counts, { absent: 1, late: 2, leave: 1, resigned: 0, present: 6 })
   assert.equal(presentRate(counts), 60)
   assert.equal(formatRate(presentRate(counts)), '60.0%')
 })
@@ -69,7 +71,7 @@ test('summarizeByStudent: every roster student gets a row, ordered by class numb
       [9, 1],
     ],
   )
-  assert.equal(rows[1]?.rate, 0) // สาย and ออกก่อน are not มา
+  assert.equal(rows[1]?.rate, 0) // สาย and ลาออก are not มา
   assert.equal(rows[2]?.rate, null) // no record in range: not counted
 })
 
@@ -101,4 +103,34 @@ test('summarizeLate: only สาย, counts per student (most first), rows by da
       ['2026-10-08', 1],
     ],
   )
+})
+
+// Student 1 also attended activity 5 twice (one สาย) and activity 6 once.
+const withActivities = [
+  ...fixture,
+  rec(1, '2026-10-01', 'present', 5),
+  rec(1, '2026-10-02', 'late', 5),
+  rec(1, '2026-10-01', 'absent', 6),
+]
+
+test('activity filter: the default is homeroom only, so daily rates ignore activity records', () => {
+  const rows = summarizeByStudent(withActivities, students)
+  assert.equal(rows[0]?.total, 10)
+  assert.equal(rows[0]?.rate, 60)
+  assert.equal(summarizeLate(withActivities, students).total, 4)
+})
+
+test('activity filter: one activity keeps just its records', () => {
+  assert.equal(filterByActivity(withActivities, 5).length, 2)
+  const rows = summarizeByStudent(withActivities, students, 5)
+  assert.deepEqual(rows[0]?.counts, { absent: 0, late: 1, leave: 0, present: 1, resigned: 0 })
+  assert.equal(rows[1]?.total, 0) // student 2 has no activity-5 record
+  assert.equal(summarizeLate(withActivities, students, 5).total, 1)
+})
+
+test('activity filter: all = homeroom + every activity', () => {
+  const rows = summarizeByStudent(withActivities, students, 'all')
+  assert.equal(rows[0]?.total, 13)
+  assert.equal(summarizeLate(withActivities, students, 'all').total, 5)
+  assert.equal(filterByActivity(withActivities, 'homeroom').length, fixture.length)
 })
