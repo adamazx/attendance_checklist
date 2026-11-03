@@ -29,7 +29,7 @@ export const AttendanceRecord: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'date',
-    defaultColumns: ['student', 'date', 'status', 'classroom', 'recordedBy'],
+    defaultColumns: ['student', 'date', 'activity', 'status', 'classroom', 'recordedBy'],
     group: 'การเช็คชื่อ',
   },
   access: {
@@ -44,7 +44,9 @@ export const AttendanceRecord: CollectionConfig = {
     afterChange: [auditAttendanceChange],
     afterDelete: [auditAttendanceDelete],
   },
-  indexes: [{ fields: ['student', 'date'], unique: true }],
+  // One record per student per day per activity (none = homeroom). Enforced by two
+  // partial unique indexes declared in payload.config.ts (afterSchemaInit) —
+  // Payload's `indexes` option can't express the `WHERE activity_id IS [NOT] NULL`.
   fields: [
     {
       name: 'student',
@@ -78,6 +80,17 @@ export const AttendanceRecord: CollectionConfig = {
       access: { update: noUpdate },
     },
     {
+      // Part of the uniqueness key, so immutable after create like student/date.
+      name: 'activity',
+      type: 'relationship',
+      relationTo: 'activities',
+      label: 'วิชา/กิจกรรม',
+      admin: {
+        description: 'เว้นว่าง = เช็คชื่อประจำวัน (โฮมรูม)',
+      },
+      access: { update: noUpdate },
+    },
+    {
       name: 'status',
       type: 'select',
       required: true,
@@ -87,10 +100,11 @@ export const AttendanceRecord: CollectionConfig = {
         { label: 'สาย', value: 'late' },
         { label: 'ลา', value: 'leave' },
         { label: 'ขาด', value: 'absent' },
-        { label: 'ออกก่อน', value: 'left_early' },
+        { label: 'ลาออก', value: 'resigned' },
       ],
       admin: {
-        description: 'สถานะปรับเพิ่มได้ภายหลัง',
+        // ลาออก = สิ้นสภาพนักศึกษา, a daily marker only: it never changes Student.status.
+        description: 'ลาออก = สิ้นสภาพนักศึกษา (บันทึกรายวันเท่านั้น ไม่เปลี่ยนสถานะนักเรียน)',
       },
     },
     {

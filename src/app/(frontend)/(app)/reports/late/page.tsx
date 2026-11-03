@@ -8,8 +8,10 @@ import {
   NoClassrooms,
   RangeNotices,
   ReportHeading,
+  activityFilterLabel,
   formatRange,
   numClass,
+  recordActivityName,
   tableClass,
   tdClass,
   thClass,
@@ -23,7 +25,8 @@ export const metadata = { title: 'นักเรียนมาสาย | ร�
 const TITLE = 'นักเรียนมาสาย'
 
 export default async function Page(props: { searchParams: ReportSearchParams }) {
-  const { classroom, classrooms, quick, range, req, today } = await loadReportContext(props.searchParams)
+  const { activities, activity, activityName, classroom, classrooms, quick, range, req, today } =
+    await loadReportContext(props.searchParams)
   if (!classroom) {
     return (
       <div className="mt-6">
@@ -45,14 +48,17 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
     classroom.id,
     records.map((r) => r.studentId),
   )
-  const late = summarizeLate(records, students)
+  const late = summarizeLate(records, students, activity)
 
   return (
     <div className="mt-6">
       <ReportHeading title={TITLE}>
-        <span className="font-semibold">ห้อง {classroom.name}</span> · {formatRange(range)}
+        <span className="font-semibold">ห้อง {classroom.name}</span> · {activityFilterLabel(activity, activityName)} ·{' '}
+        {formatRange(range)}
       </ReportHeading>
       <ReportFilters
+        activities={activities}
+        activity={activity}
         classroomId={classroom.id}
         classrooms={classrooms}
         path="/reports/late"
@@ -103,6 +109,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                   <th className={thClass}>วันที่</th>
                   <th className={thClass}>เลขที่</th>
                   <th className={thClass}>ชื่อ - นามสกุล</th>
+                  {activity === 'all' && <th className={thClass}>วิชา/กิจกรรม</th>}
                   <th className={thClass}>หมายเหตุ</th>
                 </tr>
               </thead>
@@ -115,6 +122,9 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                       {student.name}
                       {student.departed && <DepartedTag />}
                     </td>
+                    {activity === 'all' && (
+                      <td className={tdClass}>{recordActivityName(record.activityId, activityName)}</td>
+                    )}
                     <td className={tdClass}>{record.note || '—'}</td>
                   </tr>
                 ))}

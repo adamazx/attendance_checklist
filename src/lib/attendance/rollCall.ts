@@ -4,7 +4,7 @@
  * a comment says otherwise. Eligibility comes from actual advisor assignment, so an
  * admin's broad read never widens this UI.
  */
-import type { PayloadRequest } from 'payload'
+import type { PayloadRequest, Where } from 'payload'
 
 import { advisorActiveClassroomIds } from '@/access'
 import { toThaiDay } from '@/lib/date/thaiDay'
@@ -17,6 +17,12 @@ export interface RollCallClassroom {
   academicYearId: number
   id: number
   name: string
+}
+
+export interface RollCallActivity {
+  id: number
+  name: string
+  type: 'activity' | 'subject'
 }
 
 export interface RollCallRow {
@@ -57,6 +63,25 @@ export const listRollCallClassrooms = async (req: PayloadRequest): Promise<RollC
   }))
 }
 
+/** Every subject/activity (readable by any signed-in user): วิชา first, then กิจกรรม, by name. */
+export const listActivities = async (req: PayloadRequest): Promise<RollCallActivity[]> => {
+  const result = await req.payload.find({
+    collection: 'activities',
+    depth: 0,
+    limit: 0,
+    pagination: false,
+    overrideAccess: false,
+    req,
+  })
+  return result.docs
+    .map((a) => ({ id: a.id, name: a.name, type: a.type }))
+    .sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name, 'th', { numeric: true }) : a.type === 'subject' ? -1 : 1))
+}
+
+/** Records under one activity, or the daily homeroom (no activity) when `activityId` is null. */
+export const activityWhere = (activityId: number | null): Where =>
+  activityId === null ? { activity: { exists: false } } : { activity: { equals: activityId } }
+
 /** Students currently studying in a classroom, in class-number order. */
 export const loadRoster = async (req: PayloadRequest, classroomId: number): Promise<Student[]> => {
   const result = await req.payload.find({
@@ -73,20 +98,28 @@ export const loadRoster = async (req: PayloadRequest, classroomId: number): Prom
 }
 
 /**
- * Records for a day, for the given students or this classroom — those the caller may
- * read, or all of them with `overrideAccess` (the save route needs records under a
- * student's old classroom to detect a conflict; it never returns them).
+ * Records for a day under one activity (null = homeroom), for the given students or
+ * this classroom — those the caller may read, or all of them with `overrideAccess`
+ * (the save route needs records under a student's old classroom to detect a
+ * conflict; it never returns them).
  */
 export const loadExisting = async (
   req: PayloadRequest,
-  args: { classroomId?: number; date: string; overrideAccess?: boolean; studentIds?: number[] },
+  args: {
+    activityId: number | null
+    classroomId?: number
+    date: string
+    overrideAccess?: boolean
+    studentIds?: number[]
+  },
 ): Promise<ExistingRecord[]> => {
-  const { classroomId, date, overrideAccess = false, studentIds = [] } = args
+  const { activityId, classroomId, date, overrideAccess = false, studentIds = [] } = args
   const result = await req.payload.find({
     collection: 'attendance-records',
     where: {
       and: [
         { date: { equals: date } },
+        activityWhere(activityId),
         {
           or: [
             { student: { in: studentIds } },
@@ -113,16 +146,18 @@ export const loadExisting = async (
 export const fullName = (s: Pick<Student, 'firstName' | 'lastName' | 'prefix'>): string => `${s.prefix ?? ''}${s.firstName} ${s.lastName}`.trim()
 
 /**
- * The rows for one classroom and day, pre-filled from saved records. `savedOnly`
- * (the edit page) keeps just the students who have a record that day.
+ * The rows for one classroom, day and activity (null = homeroom), pre-filled from
+ * saved records. `savedOnly` (the edit page) keeps just the students who have a
+ * record that day under that activity.
  */
 export const loadRollCallRows = async (
   req: PayloadRequest,
-  args: { classroomId: number; date: string; savedOnly: boolean },
+  args: { activityId: number | null; classroomId: number; date: string; savedOnly: boolean },
 ): Promise<RollCallRow[]> => {
-  const { classroomId, date, savedOnly } = args
+  const { activityId, classroomId, date, savedOnly } = args
   const roster = await loadRoster(req, classroomId)
   const existing = await loadExisting(req, {
+    activityId,
     classroomId,
     date,
     studentIds: roster.map((s) => s.id),

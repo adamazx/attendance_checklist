@@ -10,14 +10,16 @@ import {
   RangeNotices,
   ReportHeading,
   StatusBadge,
+  activityFilterLabel,
   formatRange,
+  recordActivityName,
   tableClass,
   tdClass,
   thClass,
 } from '@/components/reports/ReportParts'
 import { ATTENDANCE_STATUSES } from '@/lib/attendance/statuses'
 import { formatThaiDayLong } from '@/lib/date/thaiDay'
-import { compareStudents, countStatuses, formatRate, presentRate } from '@/lib/reports/aggregate'
+import { compareStudents, countStatuses, filterByActivity, formatRate, presentRate } from '@/lib/reports/aggregate'
 import { loadRangeRecords, loadReportStudents } from '@/lib/reports/queries'
 
 export const metadata = { title: 'รายงานนักเรียน | ระบบครูที่ปรึกษา' }
@@ -25,7 +27,8 @@ export const metadata = { title: 'รายงานนักเรียน | �
 const TITLE = 'รายงานนักเรียน'
 
 export default async function Page(props: { searchParams: ReportSearchParams }) {
-  const { classroom, classrooms, params, quick, range, req, today } = await loadReportContext(props.searchParams)
+  const { activities, activity, activityName, classroom, classrooms, params, quick, range, req, today } =
+    await loadReportContext(props.searchParams)
   if (!classroom) {
     return (
       <div className="mt-6">
@@ -49,7 +52,10 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
 
   // Access still applies: an advisor sees only this student's records under a
   // classroom they advise, so earlier/later rooms outside their scope stay hidden.
-  const records = student ? await loadRangeRecords(req, { from: range.from, studentId: student.id, to: range.to }) : []
+  const records = filterByActivity(
+    student ? await loadRangeRecords(req, { from: range.from, studentId: student.id, to: range.to }) : [],
+    activity,
+  )
   const counts = countStatuses(records)
   const classroomName = new Map(classrooms.map((c) => [c.id, c.name]))
   const multiRoom = new Set(records.map((r) => r.classroomId)).size > 1
@@ -79,6 +85,8 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
       <p className="hidden text-center text-sm print:block">โรงเรียนโนนหันวิทยายน องค์การบริหารส่วนจังหวัดขอนแก่น</p>
       <ReportHeading title={TITLE} />
       <ReportFilters
+        activities={activities}
+        activity={activity}
         classroomId={classroom.id}
         classrooms={classrooms}
         extra={students.length > 0 ? studentSelect : null}
@@ -109,6 +117,8 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                   {classroom.name}
                   {student.classNumber != null && ` เลขที่ ${student.classNumber}`}
                 </dd>
+                <dt className="text-muted">วิชา/กิจกรรม</dt>
+                <dd>{activityFilterLabel(activity, activityName)}</dd>
                 <dt className="text-muted">ช่วงวันที่</dt>
                 <dd>{formatRange(range)}</dd>
               </dl>
@@ -121,7 +131,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                 </li>
               ))}
               <li className="rounded-lg border border-brand-gold bg-gold-pale px-3 py-1.5 font-semibold">
-                รวม {records.length} วัน · มา {formatRate(presentRate(counts))}
+                รวม {records.length} {activity === 'all' ? 'ครั้ง' : 'วัน'} · มา {formatRate(presentRate(counts))}
               </li>
             </ul>
           </section>
@@ -136,6 +146,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                     <th className={thClass}>ลำดับ</th>
                     <th className={thClass}>วันที่</th>
                     {multiRoom && <th className={thClass}>ห้อง</th>}
+                    {activity === 'all' && <th className={thClass}>วิชา/กิจกรรม</th>}
                     <th className={thClass}>สถานะ</th>
                     <th className={thClass}>หมายเหตุ</th>
                   </tr>
@@ -148,6 +159,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                       {multiRoom && (
                         <td className={tdClass}>{(r.classroomId && classroomName.get(r.classroomId)) ?? '—'}</td>
                       )}
+                      {activity === 'all' && <td className={tdClass}>{recordActivityName(r.activityId, activityName)}</td>}
                       <td className={tdClass}>
                         <StatusBadge status={r.status} />
                       </td>
