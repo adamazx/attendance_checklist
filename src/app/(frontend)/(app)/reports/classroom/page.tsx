@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import React from 'react'
 
+import { ExportButtons } from '@/components/reports/ExportButtons'
 import { activityLinkParams, loadReportContext, type ReportSearchParams } from '@/components/reports/loadReportContext'
 import { ReportFilters } from '@/components/reports/ReportFilters'
+import { loadClassroomView } from '@/components/reports/reportViews'
 import {
   DepartedTag,
   EmptyState,
@@ -19,16 +21,15 @@ import {
   totalLabel,
 } from '@/components/reports/ReportParts'
 import { ATTENDANCE_STATUSES } from '@/lib/attendance/statuses'
-import { countStatuses, filterByActivity, formatRate, presentRate, summarizeByStudent } from '@/lib/reports/aggregate'
-import { loadRangeRecords, loadReportStudents } from '@/lib/reports/queries'
+import { formatRate } from '@/lib/reports/aggregate'
 
 export const metadata = { title: 'รายงานรายห้อง | ระบบครูที่ปรึกษา' }
 
 const TITLE = 'รายงานรายห้อง'
 
 export default async function Page(props: { searchParams: ReportSearchParams }) {
-  const { activities, activity, activityName, classroom, classrooms, quick, range, req, today } =
-    await loadReportContext(props.searchParams)
+  const ctx = await loadReportContext(props.searchParams)
+  const { activities, activity, activityName, classroom, classrooms, quick, range, today } = ctx
   if (!classroom) {
     return (
       <div className="mt-6">
@@ -38,15 +39,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
     )
   }
 
-  const allRecords = await loadRangeRecords(req, { classroomId: classroom.id, from: range.from, to: range.to })
-  const students = await loadReportStudents(
-    req,
-    classroom.id,
-    allRecords.map((r) => r.studentId),
-  )
-  const records = filterByActivity(allRecords, activity)
-  const rows = summarizeByStudent(allRecords, students, activity)
-  const totals = countStatuses(records)
+  const { recordCount, rows, totalRate, totals } = await loadClassroomView({ ...ctx, classroom })
   const studentLink = (studentId: number) =>
     `/reports/student?${new URLSearchParams({ classroom: String(classroom.id), ...activityLinkParams(activity), from: range.from, student: String(studentId), to: range.to })}`
 
@@ -68,10 +61,13 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
       />
       <RangeNotices notices={range.notices} />
 
-      {records.length === 0 ? (
+      {recordCount === 0 ? (
         <EmptyState />
       ) : (
         <div className="overflow-x-auto">
+          <div className="mb-3">
+            <ExportButtons activity={activity} classroomId={classroom.id} range={range} report="classroom" />
+          </div>
           <table className={tableClass}>
             <thead>
               <tr>
@@ -118,8 +114,8 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                     {totals[s.value]}
                   </td>
                 ))}
-                <td className={`${tdClass} ${numClass}`}>{records.length}</td>
-                <td className={`${tdClass} ${numClass}`}>{formatRate(presentRate(totals))}</td>
+                <td className={`${tdClass} ${numClass}`}>{recordCount}</td>
+                <td className={`${tdClass} ${numClass}`}>{formatRate(totalRate)}</td>
               </tr>
             </tfoot>
           </table>
