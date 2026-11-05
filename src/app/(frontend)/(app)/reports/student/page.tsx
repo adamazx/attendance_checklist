@@ -1,8 +1,10 @@
 import React from 'react'
 
-import { loadReportContext, one, type ReportSearchParams } from '@/components/reports/loadReportContext'
+import { ExportButtons } from '@/components/reports/ExportButtons'
+import { loadReportContext, type ReportSearchParams } from '@/components/reports/loadReportContext'
 import { PrintButton } from '@/components/reports/PrintButton'
 import { ReportFilters } from '@/components/reports/ReportFilters'
+import { loadStudentView } from '@/components/reports/reportViews'
 import {
   DepartedTag,
   EmptyState,
@@ -19,16 +21,15 @@ import {
 } from '@/components/reports/ReportParts'
 import { ATTENDANCE_STATUSES } from '@/lib/attendance/statuses'
 import { formatThaiDayLong } from '@/lib/date/thaiDay'
-import { compareStudents, countStatuses, filterByActivity, formatRate, presentRate } from '@/lib/reports/aggregate'
-import { loadRangeRecords, loadReportStudents } from '@/lib/reports/queries'
+import { formatRate } from '@/lib/reports/aggregate'
 
 export const metadata = { title: 'รายงานนักเรียน | ระบบครูที่ปรึกษา' }
 
 const TITLE = 'รายงานนักเรียน'
 
 export default async function Page(props: { searchParams: ReportSearchParams }) {
-  const { activities, activity, activityName, classroom, classrooms, params, quick, range, req, today } =
-    await loadReportContext(props.searchParams)
+  const ctx = await loadReportContext(props.searchParams)
+  const { activities, activity, activityName, classroom, classrooms, quick, range, today } = ctx
   if (!classroom) {
     return (
       <div className="mt-6">
@@ -38,27 +39,8 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
     )
   }
 
-  // The choosable students: the classroom's own, plus anyone recorded here in range
-  // who has since left. A `student` param outside that list falls back to the first.
-  const classroomRecords = await loadRangeRecords(req, { classroomId: classroom.id, from: range.from, to: range.to })
-  const students = (
-    await loadReportStudents(
-      req,
-      classroom.id,
-      classroomRecords.map((r) => r.studentId),
-    )
-  ).sort(compareStudents)
-  const student = students.find((s) => String(s.id) === one(params.student)) ?? students[0] ?? null
-
-  // Access still applies: an advisor sees only this student's records under a
-  // classroom they advise, so earlier/later rooms outside their scope stay hidden.
-  const records = filterByActivity(
-    student ? await loadRangeRecords(req, { from: range.from, studentId: student.id, to: range.to }) : [],
-    activity,
-  )
-  const counts = countStatuses(records)
+  const { counts, multiRoom, rate, records, student, students } = await loadStudentView({ ...ctx, classroom })
   const classroomName = new Map(classrooms.map((c) => [c.id, c.name]))
-  const multiRoom = new Set(records.map((r) => r.classroomId)).size > 1
 
   const studentSelect = (
     <label className="block font-medium">
@@ -122,7 +104,18 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                 <dt className="text-muted">ช่วงวันที่</dt>
                 <dd>{formatRange(range)}</dd>
               </dl>
-              <PrintButton />
+              <div className="flex flex-wrap gap-2">
+                {records.length > 0 && (
+                  <ExportButtons
+                    activity={activity}
+                    classroomId={classroom.id}
+                    range={range}
+                    report="student"
+                    studentId={student.id}
+                  />
+                )}
+                <PrintButton />
+              </div>
             </div>
             <ul aria-label="สรุปสถานะ" className="mt-4 flex flex-wrap gap-2">
               {ATTENDANCE_STATUSES.map((s) => (
@@ -131,7 +124,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                 </li>
               ))}
               <li className="rounded-lg border border-brand-gold bg-gold-pale px-3 py-1.5 font-semibold">
-                รวม {records.length} {activity === 'all' ? 'ครั้ง' : 'วัน'} · มา {formatRate(presentRate(counts))}
+                รวม {records.length} {activity === 'all' ? 'ครั้ง' : 'วัน'} · มา {formatRate(rate)}
               </li>
             </ul>
           </section>

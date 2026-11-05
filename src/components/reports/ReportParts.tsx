@@ -2,19 +2,22 @@ import Link from 'next/link'
 import React from 'react'
 
 import { statusInfo, type AttendanceStatus } from '@/lib/attendance/statuses'
-import { formatThaiDay } from '@/lib/date/thaiDay'
-import type { ActivityFilter } from '@/lib/reports/aggregate'
-import type { DateRange, RangeNotice } from '@/lib/reports/dateRange'
+import type { RangeNotice } from '@/lib/reports/dateRange'
 import { RANGE_NOTICE_MESSAGES } from '@/lib/reports/dateRange'
+import { DEPARTED_SUFFIX, EMPTY_RECORDS } from '@/lib/reports/labels'
+
+export {
+  activityFilterLabel,
+  formatRange,
+  rateFootnote,
+  recordActivityName,
+  totalLabel,
+} from '@/lib/reports/labels'
 
 export const tableClass = 'w-full border-collapse overflow-hidden rounded-xl bg-surface text-sm shadow-card print:shadow-none'
 export const thClass = 'border-b-2 border-brand-gold bg-gold-pale px-2.5 py-2 text-left font-semibold'
 export const tdClass = 'border-b border-line px-2.5 py-2'
 export const numClass = 'text-right tabular-nums'
-
-/** `1 พฤศจิกายน 2569 – 3 พฤศจิกายน 2569`, or a single day. */
-export const formatRange = (range: DateRange): string =>
-  range.from === range.to ? formatThaiDay(range.from) : `${formatThaiDay(range.from)} – ${formatThaiDay(range.to)}`
 
 export function ReportHeading(props: { children?: React.ReactNode; title: string }) {
   return (
@@ -44,7 +47,7 @@ export const NoClassrooms = () => <p className="mt-4">ยังไม่มี�
 
 export const EmptyState = (props: { children?: React.ReactNode }) => (
   <p className="rounded-xl bg-surface p-4 text-center text-muted shadow-card">
-    {props.children ?? 'ไม่มีข้อมูลเช็คชื่อในช่วงวันที่เลือก'}
+    {props.children ?? EMPTY_RECORDS}
   </p>
 )
 
@@ -59,25 +62,5 @@ export function StatusBadge(props: { status: AttendanceStatus }) {
   )
 }
 
-/** A record's activity for a table cell: its name, or the homeroom. */
-export const recordActivityName = (activityId: number | null, names: ReadonlyMap<number, string>): string =>
-  activityId === null ? 'โฮมรูม' : (names.get(activityId) ?? '—')
-
-/** The filter for the report heading. */
-export const activityFilterLabel = (filter: ActivityFilter, names: ReadonlyMap<number, string>): string =>
-  filter === 'homeroom' ? 'เช็คชื่อประจำวัน' : filter === 'all' ? 'ทุกกิจกรรม' : (names.get(filter) ?? '—')
-
-/**
- * Header for a record total. Only "all" can hold several records per student per
- * day, so its totals are times (ครั้ง), not days.
- */
-export const totalLabel = (filter: ActivityFilter): string => (filter === 'all' ? 'รวม (ครั้ง)' : 'รวมวัน')
-
-/** How %มา is computed (see aggregate's presentRate), as a footnote for the filter. */
-export const rateFootnote = (filter: ActivityFilter): string =>
-  filter === 'all'
-    ? '%มา = จำนวนครั้งที่ “มา” หรือ “สาย” ÷ จำนวนครั้งที่มีการบันทึก (รวมโฮมรูมและทุกวิชา/กิจกรรม)'
-    : '%มา = จำนวนวันที่ “มา” หรือ “สาย” ÷ จำนวนวันที่มีการบันทึกในช่วงวันที่เลือก (วันที่ไม่มีการบันทึกไม่นับ)'
-
 /** Shown beside a student who is no longer studying in the report's classroom. */
-export const DepartedTag = () => <span className="ml-1.5 text-xs text-muted">(ย้าย/ออก)</span>
+export const DepartedTag = () => <span className="ml-1.5 text-xs text-muted">{DEPARTED_SUFFIX}</span>

@@ -1,7 +1,9 @@
 import React from 'react'
 
+import { ExportButtons } from '@/components/reports/ExportButtons'
 import { loadReportContext, type ReportSearchParams } from '@/components/reports/loadReportContext'
 import { ReportFilters } from '@/components/reports/ReportFilters'
+import { loadLateView } from '@/components/reports/reportViews'
 import {
   DepartedTag,
   EmptyState,
@@ -17,16 +19,14 @@ import {
   thClass,
 } from '@/components/reports/ReportParts'
 import { formatThaiDayLong } from '@/lib/date/thaiDay'
-import { summarizeLate } from '@/lib/reports/aggregate'
-import { loadRangeRecords, loadReportStudents } from '@/lib/reports/queries'
 
 export const metadata = { title: 'นักเรียนมาสาย | ระบบครูที่ปรึกษา' }
 
 const TITLE = 'นักเรียนมาสาย'
 
 export default async function Page(props: { searchParams: ReportSearchParams }) {
-  const { activities, activity, activityName, classroom, classrooms, quick, range, req, today } =
-    await loadReportContext(props.searchParams)
+  const ctx = await loadReportContext(props.searchParams)
+  const { activities, activity, activityName, classroom, classrooms, quick, range, today } = ctx
   if (!classroom) {
     return (
       <div className="mt-6">
@@ -36,19 +36,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
     )
   }
 
-  const records = await loadRangeRecords(req, {
-    classroomId: classroom.id,
-    from: range.from,
-    status: 'late',
-    to: range.to,
-  })
-  // Resolves departed students too, from their own late records in this classroom.
-  const students = await loadReportStudents(
-    req,
-    classroom.id,
-    records.map((r) => r.studentId),
-  )
-  const late = summarizeLate(records, students, activity)
+  const { late } = await loadLateView({ ...ctx, classroom })
 
   return (
     <div className="mt-6">
@@ -72,9 +60,12 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
         <EmptyState>ไม่มีนักเรียนมาสายในช่วงวันที่เลือก</EmptyState>
       ) : (
         <>
-          <p className="mb-3 inline-block rounded-lg bg-action-amber px-3 py-1.5 font-semibold text-on-amber">
-            มาสายรวม {late.total} ครั้ง · {late.perStudent.length} คน
-          </p>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="inline-block rounded-lg bg-action-amber px-3 py-1.5 font-semibold text-on-amber">
+              มาสายรวม {late.total} ครั้ง · {late.perStudent.length} คน
+            </p>
+            <ExportButtons activity={activity} classroomId={classroom.id} range={range} report="late" />
+          </div>
 
           <h2 className="mt-2 mb-2 text-lg font-bold text-brand-red-dark">สรุปรายคน</h2>
           <div className="mb-6 overflow-x-auto">
