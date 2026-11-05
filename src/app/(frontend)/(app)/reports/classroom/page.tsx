@@ -93,6 +93,13 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                       {row.student.name}
                     </Link>
                     {row.student.departed && <DepartedTag />}
+                    <Link
+                      aria-label={`ประวัตินักเรียน ${row.student.name}`}
+                      className="ml-2 text-xs text-muted print:hidden"
+                      href={`/students/${row.student.id}`}
+                    >
+                      ประวัติ
+                    </Link>
                   </td>
                   {ATTENDANCE_STATUSES.map((s) => (
                     <td className={`${tdClass} ${numClass}`} key={s.value}>

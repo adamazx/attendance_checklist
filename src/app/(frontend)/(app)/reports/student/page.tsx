@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import React from 'react'
 
 import { ExportButtons } from '@/components/reports/ExportButtons'
@@ -5,23 +6,16 @@ import { loadReportContext, type ReportSearchParams } from '@/components/reports
 import { PrintButton } from '@/components/reports/PrintButton'
 import { ReportFilters } from '@/components/reports/ReportFilters'
 import { loadStudentView } from '@/components/reports/reportViews'
+import { HistoryTable, StatusSummary } from '@/components/reports/StudentHistory'
 import {
   DepartedTag,
   EmptyState,
   NoClassrooms,
   RangeNotices,
   ReportHeading,
-  StatusBadge,
   activityFilterLabel,
   formatRange,
-  recordActivityName,
-  tableClass,
-  tdClass,
-  thClass,
 } from '@/components/reports/ReportParts'
-import { ATTENDANCE_STATUSES } from '@/lib/attendance/statuses'
-import { formatThaiDayLong } from '@/lib/date/thaiDay'
-import { formatRate } from '@/lib/reports/aggregate'
 
 export const metadata = { title: 'รายงานนักเรียน | ระบบครูที่ปรึกษา' }
 
@@ -39,7 +33,8 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
     )
   }
 
-  const { counts, multiRoom, rate, records, student, students } = await loadStudentView({ ...ctx, classroom })
+  const view = await loadStudentView({ ...ctx, classroom })
+  const { records, student, students } = view
   const classroomName = new Map(classrooms.map((c) => [c.id, c.name]))
 
   const studentSelect = (
@@ -114,55 +109,16 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
                     studentId={student.id}
                   />
                 )}
+                <Link className="inline-flex min-h-10 items-center rounded-lg border border-brand-gold px-3 font-semibold text-brand-red-dark no-underline print:hidden" href={`/students/${student.id}`}>
+                  ประวัตินักเรียน
+                </Link>
                 <PrintButton />
               </div>
             </div>
-            <ul aria-label="สรุปสถานะ" className="mt-4 flex flex-wrap gap-2">
-              {ATTENDANCE_STATUSES.map((s) => (
-                <li className={`rounded-lg px-3 py-1.5 font-semibold print:border print:border-line ${s.badgeClass}`} key={s.value}>
-                  {s.label} {counts[s.value]}
-                </li>
-              ))}
-              <li className="rounded-lg border border-brand-gold bg-gold-pale px-3 py-1.5 font-semibold">
-                รวม {records.length} {activity === 'all' ? 'ครั้ง' : 'วัน'} · มา {formatRate(rate)}
-              </li>
-            </ul>
+            <StatusSummary activity={activity} view={view} />
           </section>
 
-          {records.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className={tableClass}>
-                <thead>
-                  <tr>
-                    <th className={thClass}>ลำดับ</th>
-                    <th className={thClass}>วันที่</th>
-                    {multiRoom && <th className={thClass}>ห้อง</th>}
-                    {activity === 'all' && <th className={thClass}>วิชา/กิจกรรม</th>}
-                    <th className={thClass}>สถานะ</th>
-                    <th className={thClass}>หมายเหตุ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.map((r, i) => (
-                    <tr key={r.id}>
-                      <td className={tdClass}>{i + 1}</td>
-                      <td className={tdClass}>{formatThaiDayLong(r.date)}</td>
-                      {multiRoom && (
-                        <td className={tdClass}>{(r.classroomId && classroomName.get(r.classroomId)) ?? '—'}</td>
-                      )}
-                      {activity === 'all' && <td className={tdClass}>{recordActivityName(r.activityId, activityName)}</td>}
-                      <td className={tdClass}>
-                        <StatusBadge status={r.status} />
-                      </td>
-                      <td className={tdClass}>{r.note || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <HistoryTable activity={activity} activityName={activityName} classroomName={classroomName} view={view} />
         </>
       )}
     </div>

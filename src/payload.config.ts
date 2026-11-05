@@ -15,6 +15,7 @@ import { AttendanceRecord } from './collections/AttendanceRecord'
 import { AuditLog } from './collections/AuditLog'
 import { Classroom } from './collections/Classroom'
 import { Student } from './collections/Student'
+import { StudentPhotos } from './collections/StudentPhotos'
 import { Term } from './collections/Term'
 import { Users } from './collections/Users'
 
@@ -64,7 +65,10 @@ export default buildConfig({
   // Phase 1 master data (Teacher modeled as fields on Users) + Phase 2 daily
   // attendance layer: AttendanceRecord (audited) and the append-only AuditLog.
   // Activity is the optional subject/activity an attendance record is taken under.
-  collections: [Users, AcademicYear, Term, Activity, Classroom, Student, AttendanceRecord, AuditLog],
+  // StudentPhotos: one photo per student (local disk in dev; prod needs a storage adapter).
+  collections: [Users, AcademicYear, Term, Activity, Classroom, Student, StudentPhotos, AttendanceRecord, AuditLog],
+  // Uploads are student photos only; cap their size.
+  upload: { limits: { fileSize: 5 * 1024 * 1024 } },
   // The app uses REST and the Local API only. GraphQL also can't build its schema:
   // the Thai Student.prefix option values aren't valid GraphQL enum names.
   graphQL: { disable: true },
