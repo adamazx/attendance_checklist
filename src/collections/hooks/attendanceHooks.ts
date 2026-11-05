@@ -76,6 +76,8 @@ export const setSnapshotAndEnforce: CollectionBeforeChangeHook = async ({ data, 
   const student = await req.payload.findByID({
     collection: 'students',
     id: studentId,
+    // overrideAccess skips field-level PDPA access too: load only the classroom.
+    select: { classroom: true },
     depth: 0,
     overrideAccess: true,
     req,

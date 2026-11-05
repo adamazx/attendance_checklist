@@ -233,6 +233,128 @@ export interface Student {
    * สถานะปรับเพิ่มได้ภายหลัง (เช่น แยกลาป่วย/ลากิจ)
    */
   status: 'studying' | 'transferred' | 'on_leave' | 'graduated';
+  /**
+   * ตัวเลข 13 หลัก — เฉพาะผู้ดูแลระบบเห็นเลขเต็ม
+   */
+  nationalId?: string | null;
+  /**
+   * สร้างอัตโนมัติจากเลขประจำตัวประชาชน (แสดง 4 หลักท้าย)
+   */
+  nationalIdMasked?: string | null;
+  bio?: {
+    gender?: ('male' | 'female') | null;
+    program?: ('general' | 'sci_math' | 'arts_math' | 'arts_lang' | 'other') | null;
+    /**
+     * รูปแบบ YYYY-MM-DD (ค.ศ.) — แสดงผลเป็น พ.ศ.
+     */
+    birthDate?: string | null;
+    /**
+     * รูปแบบ YYYY-MM-DD (ค.ศ.) — แสดงผลเป็น พ.ศ.
+     */
+    enrollDate?: string | null;
+    nationality?: ('thai' | 'lao' | 'myanmar' | 'cambodian' | 'vietnamese' | 'chinese' | 'other') | null;
+    ethnicity?: ('thai' | 'lao' | 'myanmar' | 'cambodian' | 'vietnamese' | 'chinese' | 'other') | null;
+    religion?: ('buddhism' | 'islam' | 'christianity' | 'hinduism' | 'sikhism' | 'none' | 'other') | null;
+    heightCm?: number | null;
+    weightKg?: number | null;
+  };
+  household?: {
+    father?: {
+      prefix?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      phone?: string | null;
+      relationship?: string | null;
+      religion?: ('buddhism' | 'islam' | 'christianity' | 'hinduism' | 'sikhism' | 'none' | 'other') | null;
+      occupation?: string | null;
+      monthlyIncome?: number | null;
+      maritalStatus?: ('married' | 'divorced' | 'separated' | 'widowed' | 'single' | 'deceased' | 'other') | null;
+    };
+    mother?: {
+      prefix?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      phone?: string | null;
+      relationship?: string | null;
+      religion?: ('buddhism' | 'islam' | 'christianity' | 'hinduism' | 'sikhism' | 'none' | 'other') | null;
+      occupation?: string | null;
+      monthlyIncome?: number | null;
+      maritalStatus?: ('married' | 'divorced' | 'separated' | 'widowed' | 'single' | 'deceased' | 'other') | null;
+    };
+    guardian?: {
+      prefix?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      phone?: string | null;
+      relationship?: string | null;
+      religion?: ('buddhism' | 'islam' | 'christianity' | 'hinduism' | 'sikhism' | 'none' | 'other') | null;
+      occupation?: string | null;
+      monthlyIncome?: number | null;
+      maritalStatus?: ('married' | 'divorced' | 'separated' | 'widowed' | 'single' | 'deceased' | 'other') | null;
+    };
+  };
+  addressRegistered?: {
+    houseNo?: string | null;
+    moo?: string | null;
+    road?: string | null;
+    subdistrict?: string | null;
+    district?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
+  };
+  addressCurrent?: {
+    houseNo?: string | null;
+    moo?: string | null;
+    road?: string | null;
+    subdistrict?: string | null;
+    district?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
+  };
+  welfare?: {
+    studentCondition?: ('normal' | 'poor' | 'disadvantaged' | 'other') | null;
+    tuitionRight?: string | null;
+    medicalRight?: string | null;
+  };
+  cardDates?: {
+    /**
+     * รูปแบบ YYYY-MM-DD (ค.ศ.) — แสดงผลเป็น พ.ศ.
+     */
+    issueDate?: string | null;
+    /**
+     * รูปแบบ YYYY-MM-DD (ค.ศ.) — แสดงผลเป็น พ.ศ.
+     */
+    expiryDate?: string | null;
+  };
+  extras?: {
+    specialAbilities?: string | null;
+    disabilities?:
+      | (
+          | 'visual'
+          | 'hearing'
+          | 'intellectual'
+          | 'physical_health'
+          | 'learning'
+          | 'speech_language'
+          | 'behavioral_emotional'
+          | 'autism'
+          | 'multiple'
+        )[]
+      | null;
+    scoutType?: ('scout' | 'girl_guide' | 'red_cross_youth') | null;
+  };
+  /**
+   * เก็บเฉพาะคอลัมน์ที่ระบบยังไม่ได้จับคู่ พร้อมชื่อชีต/แถวต้นทาง เพื่อไม่ให้ข้อมูลสูญหาย
+   */
+  dlaRaw?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -481,6 +603,107 @@ export interface StudentsSelect<T extends boolean = true> {
   classNumber?: T;
   classroom?: T;
   status?: T;
+  nationalId?: T;
+  nationalIdMasked?: T;
+  bio?:
+    | T
+    | {
+        gender?: T;
+        program?: T;
+        birthDate?: T;
+        enrollDate?: T;
+        nationality?: T;
+        ethnicity?: T;
+        religion?: T;
+        heightCm?: T;
+        weightKg?: T;
+      };
+  household?:
+    | T
+    | {
+        father?:
+          | T
+          | {
+              prefix?: T;
+              firstName?: T;
+              lastName?: T;
+              phone?: T;
+              relationship?: T;
+              religion?: T;
+              occupation?: T;
+              monthlyIncome?: T;
+              maritalStatus?: T;
+            };
+        mother?:
+          | T
+          | {
+              prefix?: T;
+              firstName?: T;
+              lastName?: T;
+              phone?: T;
+              relationship?: T;
+              religion?: T;
+              occupation?: T;
+              monthlyIncome?: T;
+              maritalStatus?: T;
+            };
+        guardian?:
+          | T
+          | {
+              prefix?: T;
+              firstName?: T;
+              lastName?: T;
+              phone?: T;
+              relationship?: T;
+              religion?: T;
+              occupation?: T;
+              monthlyIncome?: T;
+              maritalStatus?: T;
+            };
+      };
+  addressRegistered?:
+    | T
+    | {
+        houseNo?: T;
+        moo?: T;
+        road?: T;
+        subdistrict?: T;
+        district?: T;
+        province?: T;
+        postalCode?: T;
+      };
+  addressCurrent?:
+    | T
+    | {
+        houseNo?: T;
+        moo?: T;
+        road?: T;
+        subdistrict?: T;
+        district?: T;
+        province?: T;
+        postalCode?: T;
+      };
+  welfare?:
+    | T
+    | {
+        studentCondition?: T;
+        tuitionRight?: T;
+        medicalRight?: T;
+      };
+  cardDates?:
+    | T
+    | {
+        issueDate?: T;
+        expiryDate?: T;
+      };
+  extras?:
+    | T
+    | {
+        specialAbilities?: T;
+        disabilities?: T;
+        scoutType?: T;
+      };
+  dlaRaw?: T;
   updatedAt?: T;
   createdAt?: T;
 }

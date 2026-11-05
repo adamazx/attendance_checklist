@@ -82,11 +82,32 @@ export const listActivities = async (req: PayloadRequest): Promise<RollCallActiv
 export const activityWhere = (activityId: number | null): Where =>
   activityId === null ? { activity: { exists: false } } : { activity: { equals: activityId } }
 
+/**
+ * Only what roll call shows. The departed lookup overrides access (which also skips
+ * field-level PDPA access), so neither read may pull more than this as the Student
+ * record grows.
+ */
+const ROSTER_SELECT = {
+  classNumber: true,
+  classroom: true,
+  firstName: true,
+  lastName: true,
+  prefix: true,
+  status: true,
+  studentId: true,
+} as const
+
+export type RosterStudent = Pick<
+  Student,
+  'id' | 'classNumber' | 'classroom' | 'firstName' | 'lastName' | 'prefix' | 'status' | 'studentId'
+>
+
 /** Students currently studying in a classroom, in class-number order. */
-export const loadRoster = async (req: PayloadRequest, classroomId: number): Promise<Student[]> => {
+export const loadRoster = async (req: PayloadRequest, classroomId: number): Promise<RosterStudent[]> => {
   const result = await req.payload.find({
     collection: 'students',
     where: { and: [{ classroom: { equals: classroomId } }, { status: { equals: 'studying' } }] },
+    select: ROSTER_SELECT,
     sort: ['classNumber', 'studentId'],
     depth: 0,
     limit: 0,
@@ -173,6 +194,7 @@ export const loadRollCallRows = async (
     ? await req.payload.find({
         collection: 'students',
         where: { id: { in: departedIds } },
+        select: ROSTER_SELECT,
         depth: 0,
         limit: 0,
         pagination: false,

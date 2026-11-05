@@ -10,6 +10,9 @@ import React, { useCallback, useRef, useState } from 'react'
 
 import type { ImportResult } from '@/lib/import/types'
 
+import { DlaImportPanel } from './DlaImportPanel'
+import { ResultTable, cardStyle } from './importUi'
+
 const TEMPLATE_HEADERS = [
   'เลขประจำตัว',
   'คำนำหน้า',
@@ -20,26 +23,6 @@ const TEMPLATE_HEADERS = [
   'สถานะ',
 ]
 const TEMPLATE_SAMPLE = ['10001', 'ด.ช.', 'สมชาย', 'ใจดี', '1', 'ม.1/1', 'กำลังศึกษา']
-
-const cardStyle: React.CSSProperties = {
-  border: '1px solid var(--theme-elevation-150)',
-  borderRadius: 'var(--style-radius-m, 6px)',
-  padding: 'var(--base, 1rem)',
-  marginBottom: '1rem',
-  background: 'var(--theme-elevation-50)',
-}
-
-const tableStyle: React.CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  fontSize: '0.85rem',
-}
-const cellStyle: React.CSSProperties = {
-  border: '1px solid var(--theme-elevation-150)',
-  padding: '0.35rem 0.5rem',
-  textAlign: 'left',
-  verticalAlign: 'top',
-}
 
 /** Download a UTF-8 (with BOM) CSV template so Excel opens Thai text correctly. */
 const downloadTemplate = () => {
@@ -54,48 +37,7 @@ const downloadTemplate = () => {
   URL.revokeObjectURL(url)
 }
 
-const ResultTable = ({
-  title,
-  rows,
-  columns,
-}: {
-  title: string
-  rows: ReadonlyArray<Record<string, unknown>>
-  columns: Array<{ key: string; label: string }>
-}) => {
-  if (rows.length === 0) return null
-  return (
-    <div style={cardStyle}>
-      <h4 style={{ marginTop: 0 }}>
-        {title} ({rows.length})
-      </h4>
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            {columns.map((c) => (
-              <th key={c.key} style={{ ...cellStyle, fontWeight: 600 }}>
-                {c.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>
-              {columns.map((c) => (
-                <td key={c.key} style={cellStyle}>
-                  {r[c.key] == null ? '' : String(r[c.key])}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-export const ImportStudentsClient: React.FC = () => {
+const RosterImportPanel: React.FC = () => {
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -133,7 +75,6 @@ export const ImportStudentsClient: React.FC = () => {
 
   return (
     <div>
-      <h1>นำเข้ารายชื่อนักเรียน</h1>
       <p style={{ color: 'var(--theme-elevation-600)' }}>
         รองรับไฟล์ CSV (UTF-8) และ Excel (.xlsx) หัวคอลัมน์ภาษาไทย เช่น เลขประจำตัว, คำนำหน้า, ชื่อ,
         นามสกุล, เลขที่, ห้องเรียน (เช่น &quot;ม.4/2&quot;), สถานะ ระบบจะตรวจซ้ำด้วยเลขประจำตัว
@@ -218,6 +159,25 @@ export const ImportStudentsClient: React.FC = () => {
           />
         </>
       )}
+    </div>
+  )
+}
+
+/** Admin import screen: the phase-1b roster import, or the DLA student-master export. */
+export const ImportStudentsClient: React.FC = () => {
+  const [format, setFormat] = useState<'roster' | 'dla'>('roster')
+  return (
+    <div>
+      <h1>นำเข้ารายชื่อนักเรียน</h1>
+      <div role="radiogroup" aria-label="ชนิดไฟล์" style={{ display: 'flex', gap: '0.5rem', margin: '0.75rem 0' }}>
+        <Button buttonStyle={format === 'roster' ? 'primary' : 'secondary'} onClick={() => setFormat('roster')}>
+          รายชื่อทั่วไป (CSV/Excel)
+        </Button>
+        <Button buttonStyle={format === 'dla' ? 'primary' : 'secondary'} onClick={() => setFormat('dla')}>
+          ไฟล์ DLA (ข้อมูลนักเรียนครบชุด)
+        </Button>
+      </div>
+      {format === 'roster' ? <RosterImportPanel /> : <DlaImportPanel />}
     </div>
   )
 }
