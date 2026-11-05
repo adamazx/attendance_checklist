@@ -23,6 +23,9 @@ export function Navbar(props: { userName: string }) {
               <Link className={itemClass} href="/">
                 หน้าหลัก
               </Link>
+              <Link className={itemClass} href="/students">
+                ค้นหานักเรียน
+              </Link>
               <Link className={itemClass} href="/change-password">
                 เปลี่ยนรหัสผ่าน
               </Link>

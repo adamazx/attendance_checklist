@@ -1,4 +1,4 @@
-import type { CollectionConfig, FieldHook, TextFieldSingleValidation } from 'payload'
+import type { CollectionBeforeDeleteHook, CollectionConfig, FieldHook, TextFieldSingleValidation } from 'payload'
 
 import { adminOnly, studentRead } from '@/access'
 import { piiAdmin, piiNoDiscipline } from '@/access/pii'
@@ -31,6 +31,21 @@ const deriveMaskedHook: FieldHook = ({ data, originalDoc }) => {
 }
 
 /**
+ * Delete the student's photo (doc + files on disk) before the student row goes.
+ * Must be *before* delete: afterwards the DB cascade has already dropped the photo
+ * row, so its files could no longer be found. Runs as the deleting admin, in the
+ * same transaction.
+ */
+const deletePhotos: CollectionBeforeDeleteHook = async ({ id, req }) => {
+  await req.payload.delete({
+    collection: 'student-photos',
+    where: { student: { equals: id } },
+    overrideAccess: false,
+    req,
+  })
+}
+
+/**
  * Student master record (DLA/อปท. export) — minors' PII (PDPA).
  *
  * Access tiers (row scope from `studentRead`, field scope from `@/access/pii`):
@@ -55,6 +70,9 @@ export const Student: CollectionConfig = {
     create: adminOnly,
     update: adminOnly,
     delete: adminOnly,
+  },
+  hooks: {
+    beforeDelete: [deletePhotos],
   },
   fields: [
     {
@@ -233,6 +251,16 @@ export const Student: CollectionConfig = {
         },
         { name: 'scoutType', type: 'select', label: 'ลูกเสือ/เนตรนารี/ยุวกาชาด', options: scoutTypeOptions },
       ],
+    },
+    {
+      // Virtual: the photo doc owns the link (student-photos.student, unique).
+      // Join results follow student-photos read access.
+      name: 'photos',
+      type: 'join',
+      collection: 'student-photos',
+      on: 'student',
+      label: 'รูปนักเรียน',
+      admin: { description: 'อัปโหลดรูปได้ที่เมนู "รูปนักเรียน" แล้วเลือกนักเรียนคนนี้' },
     },
     {
       name: 'dlaRaw',

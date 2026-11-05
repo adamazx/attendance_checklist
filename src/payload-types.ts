@@ -73,6 +73,7 @@ export interface Config {
     activities: Activity;
     classrooms: Classroom;
     students: Student;
+    'student-photos': StudentPhoto;
     'attendance-records': AttendanceRecord;
     'audit-logs': AuditLog;
     'payload-kv': PayloadKv;
@@ -80,7 +81,11 @@ export interface Config {
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    students: {
+      photos: 'student-photos';
+    };
+  };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     'academic-years': AcademicYearsSelect<false> | AcademicYearsSelect<true>;
@@ -88,6 +93,7 @@ export interface Config {
     activities: ActivitiesSelect<false> | ActivitiesSelect<true>;
     classrooms: ClassroomsSelect<false> | ClassroomsSelect<true>;
     students: StudentsSelect<false> | StudentsSelect<true>;
+    'student-photos': StudentPhotosSelect<false> | StudentPhotosSelect<true>;
     'attendance-records': AttendanceRecordsSelect<false> | AttendanceRecordsSelect<true>;
     'audit-logs': AuditLogsSelect<false> | AuditLogsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -344,6 +350,14 @@ export interface Student {
     scoutType?: ('scout' | 'girl_guide' | 'red_cross_youth') | null;
   };
   /**
+   * อัปโหลดรูปได้ที่เมนู "รูปนักเรียน" แล้วเลือกนักเรียนคนนี้
+   */
+  photos?: {
+    docs?: (number | StudentPhoto)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  /**
    * เก็บเฉพาะคอลัมน์ที่ระบบยังไม่ได้จับคู่ พร้อมชื่อชีต/แถวต้นทาง เพื่อไม่ให้ข้อมูลสูญหาย
    */
   dlaRaw?:
@@ -357,6 +371,40 @@ export interface Student {
     | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 5MB)
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "student-photos".
+ */
+export interface StudentPhoto {
+  id: number;
+  /**
+   * นักเรียนหนึ่งคนมีรูปได้หนึ่งรูป
+   */
+  student: number | Student;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  sizes?: {
+    thumbnail?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -468,6 +516,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'students';
         value: number | Student;
+      } | null)
+    | ({
+        relationTo: 'student-photos';
+        value: number | StudentPhoto;
       } | null)
     | ({
         relationTo: 'attendance-records';
@@ -703,9 +755,42 @@ export interface StudentsSelect<T extends boolean = true> {
         disabilities?: T;
         scoutType?: T;
       };
+  photos?: T;
   dlaRaw?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "student-photos_select".
+ */
+export interface StudentPhotosSelect<T extends boolean = true> {
+  student?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumbnail?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
