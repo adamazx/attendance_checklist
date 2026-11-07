@@ -52,6 +52,8 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     components: {
+      // "← กลับหน้าหลัก" at the top of the nav, for everyone who reaches /admin.
+      beforeNavLinks: ['/components/BackToHome/BackToHomeNavLink#default'],
       // Admin-only custom view for the student-roster importer (phase-1b).
       afterNavLinks: ['/components/ImportStudents/ImportStudentsNavLink#default'],
       views: {
