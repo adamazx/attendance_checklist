@@ -64,6 +64,10 @@ export const Users: CollectionConfig = {
     // Payload's default lets any logged-in user clear any account's lockout,
     // which would reset the login-attempt counter and allow unlimited guessing.
     unlock: adminOnly,
+    // Payload admin panel is for admin & discipline only. Advisors use the
+    // frontend (/students/[id] etc.); in /admin their field-level access left
+    // student field groups rendering empty. Gates the panel only, not login or REST.
+    admin: ({ req: { user } }) => isAdminOrDiscipline(user),
   },
   hooks: {
     beforeValidate: [guardCredentialChange],
