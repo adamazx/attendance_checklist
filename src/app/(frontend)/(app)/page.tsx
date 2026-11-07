@@ -32,14 +32,31 @@ const advisorTiles: HomeTileProps[] = [
 ]
 
 // Admin and discipline record in /admin; the reports cover every classroom for them.
-const staffTiles: HomeTileProps[] = [
-  { href: '/admin', icon: '🛠️', label: 'ระบบผู้ดูแล', tone: 'blue' },
+const adminPanelTile: HomeTileProps = { href: '/admin', icon: '🛠️', label: 'ระบบผู้ดูแล', tone: 'blue' }
+const staffReportTiles: HomeTileProps[] = [
   classroomReportTile,
   studentReportTile,
   lateReportTile,
   statsTile,
   chartsTile,
 ]
+
+const disciplineTiles: HomeTileProps[] = [adminPanelTile, ...staffReportTiles]
+
+// Admin only: shortcuts straight into the Payload create forms for student master data.
+const adminTiles: HomeTileProps[] = [
+  adminPanelTile,
+  { href: '/admin/collections/students/create', icon: '➕', label: 'เพิ่มนักเรียน', tone: 'green' },
+  { href: '/admin/collections/student-photos/create', icon: '🖼️', label: 'เพิ่มรูปนักเรียน', tone: 'green' },
+  ...staffReportTiles,
+]
+
+// Role comes from the server-side session (requireUser); anything not advisor/admin gets the discipline set, as before.
+function tilesForRole(role: string): HomeTileProps[] {
+  if (role === 'advisor') return advisorTiles
+  if (role === 'admin') return adminTiles
+  return disciplineTiles
+}
 
 const accountTiles: HomeTileProps[] = [
   { href: '/change-password', icon: '🔑', label: 'เปลี่ยนรหัสผ่าน', tone: 'green' },
@@ -48,7 +65,7 @@ const accountTiles: HomeTileProps[] = [
 
 export default async function HomePage() {
   const user = await requireUser()
-  const tiles = [...(user.role === 'advisor' ? advisorTiles : staffTiles), ...accountTiles]
+  const tiles = [...tilesForRole(user.role), ...accountTiles]
 
   return (
     <>
