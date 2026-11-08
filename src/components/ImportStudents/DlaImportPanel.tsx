@@ -175,7 +175,7 @@ export const DlaImportPanel: React.FC = () => {
           <ResultTable title="ผิดพลาด (ไม่บันทึก)" rows={result.errors as unknown as Rows} columns={issueColumns} />
           <ResultTable title="ซ้ำในหลายห้อง / ข้อมูลไม่ตรงกัน (ข้าม)" rows={result.conflicts as unknown as Rows} columns={issueColumns} />
           <ResultTable
-            title="เลขประจำตัวนักเรียนกับเลขประจำตัวประชาชนไม่ตรงกัน (ข้าม)"
+            title="เลขประจำตัวนักเรียนซ้ำ / ไม่ตรงกับเลขประจำตัวประชาชน (ข้าม — โปรดแก้ไขใน DLA)"
             rows={result.idConflicts as unknown as Rows}
             columns={issueColumns}
           />

@@ -1,8 +1,9 @@
 /**
  * DLA column mapping: header path → Student field path + value normalizer.
  *
- * Built to the documented DLA layout without the real file, so matching is by
- * keyword rather than exact header text. A rule with `ctx` only matches when the
+ * Built to the documented DLA layout, then checked against the real export (see
+ * `__fixtures__/realLayoutDla.ts` for its quirks); matching is by keyword rather
+ * than exact header text. A rule with `ctx` only matches when the
  * header path mentions that group (บิดา, ที่อยู่ปัจจุบัน, …); a rule without `ctx`
  * only matches when the path mentions NO group, so "ชื่อ" alone is the student's
  * name and "บิดา / ชื่อ" is the father's.
@@ -28,15 +29,26 @@ type Kind =
   | 'fullName'
   | 'disability'
   | 'scout'
+  | 'ability'
   | { select: Array<[RegExp, string]> }
 
 interface Rule {
   field: string
   leaf: RegExp
   ctx?: RegExp
+  /**
+   * When set, the rule also requires this to match the FULL header path. For
+   * columns whose meaning lives in the parent header (e.g. "ลูกเสือ / เนตรนารี / เหล่า",
+   * "ความสามารถพิเศษ / กีฬา(ระบุ)"), where the leaf alone is generic.
+   */
+  path?: RegExp
   kind: Kind
   /** Value for `disability` columns. */
   value?: string
+  /** Date only: an unreadable value is a row warning (field left empty), not an error. */
+  optional?: boolean
+  /** Date only: also accept `dd/mm/yy`, read as 2-digit พ.ศ. (25yy). See the card-date rules. */
+  twoDigitBE?: boolean
 }
 
 /** Any of these in a header path means the column belongs to a group. */
@@ -131,7 +143,8 @@ export const DLA_RULES: Rule[] = [
   disabilityRule(/ออทิสติก/, 'autism'),
   disabilityRule(/ซ้อน/, 'multiple'),
 
-  { field: 'nationalId', leaf: /ประชาชน/, kind: 'nationalId' },
+  // The real DLA export spells this header "เลขประจำตัวประชาขน" (ข for ช).
+  { field: 'nationalId', leaf: /ประชา[ชข]น/, kind: 'nationalId' },
   { field: 'studentId', leaf: /^(เลขประจำตัวนักเรียน|รหัสนักเรียน|เลขประจำตัว)$/, kind: 'text' },
   { field: 'prefix', leaf: /คำนำหน้า/, kind: 'prefix' },
   { field: 'lastName', leaf: /^(นาม)?สกุล$/, kind: 'text' },
@@ -139,7 +152,7 @@ export const DLA_RULES: Rule[] = [
   { field: 'classNumber', leaf: /^(เลขที่|ที่)$/, kind: 'int' },
   { field: 'bio.gender', leaf: /^เพศ$/, kind: { select: GENDER } },
   { field: 'bio.birthDate', leaf: /เกิด/, kind: 'date' },
-  { field: 'bio.enrollDate', leaf: /เข้าศึกษา|เข้าเรียน/, kind: 'date' },
+  { field: 'bio.enrollDate', leaf: /เข้าศึกษา|เข้าเรียน/, kind: 'date', optional: true },
   { field: 'bio.nationality', leaf: /สัญชาติ/, kind: { select: NATION } },
   { field: 'bio.ethnicity', leaf: /เชื้อชาติ/, kind: { select: NATION } },
   { field: 'bio.religion', leaf: /ศาสนา/, kind: { select: RELIGION } },
@@ -149,11 +162,27 @@ export const DLA_RULES: Rule[] = [
   { field: 'welfare.studentCondition', leaf: /สภาพนักเรียน/, kind: { select: CONDITION } },
   { field: 'welfare.tuitionRight', leaf: /ค่าเล่าเรียน/, kind: 'text' },
   { field: 'welfare.medicalRight', leaf: /รักษาพยาบาล/, kind: 'text' },
-  { field: 'extras.specialAbilities', leaf: /ความสามารถพิเศษ/, kind: 'text' },
-  { field: 'extras.scoutType', leaf: /ลูกเสือ|เนตรนารี|ยุวกาชาด/, kind: 'scout' },
-  { field: 'cardDates.issueDate', leaf: /ออกบัตร|วันที่ออก/, kind: 'date' },
-  { field: 'cardDates.expiryDate', leaf: /หมดอายุ/, kind: 'date' },
+  // Special abilities: one column, or sub-columns "ความสามารถพิเศษ / ดนตรี(ระบุ)" … — all
+  // collected into the one textarea as "ดนตรี: …" lines.
+  { field: 'extras.specialAbilities', path: /ความสามารถพิเศษ/, leaf: /./, kind: 'ability' },
+  // Scout / red-cross membership. Only the membership columns decide it — the
+  // "ลูกเสือ / เนตรนารี / ประเภท" (สามัญ …) and "ยุวกาชาด / ระดับ" sub-columns have no
+  // field and stay in dlaRaw.
+  { field: 'extras.scoutType', path: /ลูกเสือ|เนตรนารี/, leaf: /เหล่า|ลูกเสือ|เนตรนารี/, kind: 'scout' },
+  { field: 'extras.scoutType', path: /ยุวกาชาด/, leaf: /ประเภทสมาชิก|ยุวกาชาด/, kind: 'scout' },
+  // Card sheet "ออก" / "หมด" hold dd/mm/yy. In the real export the yy values are
+  // 67–69 (issue) and 70–72 (expiry, always issue + 3): as พ.ศ. that is 2567–2572,
+  // i.e. current cards; as ค.ศ. it would be 1967–72 or 2067–72, impossible for
+  // current students. So a 2-digit year here is read as 25yy (พ.ศ.).
+  { field: 'cardDates.issueDate', leaf: /^ออก$|ออกบัตร|วันที่ออก/, kind: 'date', optional: true, twoDigitBE: true },
+  { field: 'cardDates.expiryDate', leaf: /^หมด$|หมดอายุ/, kind: 'date', optional: true, twoDigitBE: true },
 ]
+
+/** Card-sheet columns never copied into dlaRaw (the full name duplicates the data sheets). */
+const CARD_DROP_RAW = /^ชื่อ\s*[-–]?\s*(นาม)?สกุล$/
+
+/** A value that looks like a national ID (13 digits, ignoring spaces/dashes/dots) — never kept raw. */
+const looksLikeNationalId = (raw: string): boolean => /^\d{13}$/.test(normalizeNationalId(raw))
 
 /** Fields the DLA import manages (for change detection and the "missing columns" check). */
 export const EXPECTED_FIELDS = [
@@ -200,6 +229,7 @@ export const ruleFor = (path: string): Rule | null => {
   const grouped = GROUP_RE.test(path)
   for (const rule of DLA_RULES) {
     if (rule.ctx ? !rule.ctx.test(path) : grouped) continue
+    if (rule.path && !rule.path.test(path)) continue
     if (rule.leaf.test(leaf)) return rule
   }
   return null
@@ -223,7 +253,47 @@ const toNumber = (s: string): number | null => {
   return /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : null
 }
 
-type Outcome = { ok: true; value?: unknown; warning?: string } | { ok: false; error?: string; warning?: string }
+const valueAt = (data: Record<string, unknown>, path: string): unknown =>
+  path.split('.').reduce<unknown>((o, k) => (o && typeof o === 'object' ? (o as Record<string, unknown>)[k] : undefined), data)
+
+/** "ไม่เป็นยุวกาชาด", "… ไม่เป็นสมาชิก" — the negative can sit anywhere in the cell. */
+const NOT_MEMBER = /ไม่(เป็น|ได้)/
+
+/**
+ * Scout type named by a text: red cross, scout, girl guide — or `SCOUT_OR_GUIDE`
+ * for the DLA's combined "ลูกเสือ-เนตรนารี" label, which the student's gender
+ * resolves (see `resolveScout`). Null when the text names none.
+ */
+const SCOUT_OR_GUIDE = 'scout_or_guide'
+const scoutFrom = (text: string): string | null => {
+  if (/ยุวกาชาด/.test(text) && !/ลูกเสือ|เนตรนารี/.test(text)) return 'red_cross_youth'
+  const scout = /ลูกเสือ/.test(text)
+  const guide = /เนตรนารี/.test(text)
+  if (scout && guide) return SCOUT_OR_GUIDE
+  if (guide) return 'girl_guide'
+  if (scout) return 'scout'
+  return null
+}
+
+/** Collapse a row's scout-column hits into one `extras.scoutType` (single select). */
+const resolveScout = (hits: string[], data: Record<string, unknown>, warnings: string[]): void => {
+  if (hits.length === 0) return
+  const gender = valueAt(data, 'bio.gender')
+  const types = [
+    ...new Set(
+      hits.map((h) => (h !== SCOUT_OR_GUIDE ? h : gender === 'female' ? 'girl_guide' : gender === 'male' ? 'scout' : h)),
+    ),
+  ]
+  const known = types.filter((t) => t !== SCOUT_OR_GUIDE)
+  if (known.length === 0) {
+    warnings.push('ลูกเสือ/เนตรนารี: ระบุไม่ได้ว่าเป็นลูกเสือหรือเนตรนารี (ไม่ทราบเพศ) — เว้นว่างไว้')
+    return
+  }
+  if (known.length > 1) warnings.push(`ลูกเสือ/เนตรนารี/ยุวกาชาด: พบหลายประเภท — ใช้ "${known[0]}"`)
+  setPath(data, 'extras.scoutType', known[0])
+}
+
+type Outcome ={ ok: true; value?: unknown; warning?: string } | { ok: false; error?: string; warning?: string }
 
 const normalize = (rule: Rule, raw: string, header: string): Outcome => {
   const kind = rule.kind
@@ -250,8 +320,12 @@ const normalize = (rule: Rule, raw: string, header: string): Outcome => {
       return { ok: true, value: n }
     }
     case 'date': {
-      const day = parseBEDate(raw)
-      if (day === undefined) return { ok: false, error: `"${header}": วันที่ "${raw}" ไม่ถูกต้อง (ต้องเป็น วว/ดด/ปปปป พ.ศ.)` }
+      const short = rule.twoDigitBE ? raw.trim().match(/^(\d{1,2})([/\-.])(\d{1,2})\2(\d{2})$/) : null
+      const day = parseBEDate(short ? `${short[1]}/${short[3]}/25${short[4]}` : raw)
+      if (day === undefined) {
+        const msg = `"${header}": วันที่ "${raw}" ไม่ถูกต้อง (ต้องเป็น วว/ดด/ปปปป พ.ศ.)`
+        return rule.optional ? { ok: false, warning: `${msg} — เว้นว่างไว้` } : { ok: false, error: msg }
+      }
       return { ok: true, value: day }
     }
     case 'prefix': {
@@ -264,11 +338,16 @@ const normalize = (rule: Rule, raw: string, header: string): Outcome => {
     case 'disability':
       return FALSY.test(raw.trim()) ? { ok: true } : { ok: true, value: rule.value }
     case 'scout': {
-      const src = FALSY.test(raw.trim()) ? '' : `${raw} ${leafOf(header)}`
-      if (!src) return { ok: true }
-      if (/ยุวกาชาด/.test(src)) return { ok: true, value: 'red_cross_youth' }
-      if (/เนตรนารี/.test(src)) return { ok: true, value: 'girl_guide' }
-      return { ok: true, value: 'scout' }
+      // "ไม่เป็นลูกเสือ-เนตรนารี" / "ไม่เป็นยุวกาชาด" = not a member.
+      const v = raw.trim()
+      if (FALSY.test(v) || NOT_MEMBER.test(v)) return { ok: true }
+      return { ok: true, value: scoutFrom(v) ?? scoutFrom(header) ?? 'scout' }
+    }
+    case 'ability': {
+      const v = raw.trim()
+      if (FALSY.test(v)) return { ok: true }
+      const label = leafOf(header).replace(/\s*\(\s*ระบุ\s*\)\s*$/, '').trim()
+      return { ok: true, value: /ความสามารถพิเศษ/.test(label) ? v : `${label}: ${v}` }
     }
     case 'fullName':
       return { ok: true, value: raw }
@@ -284,9 +363,6 @@ const applyFullName = (data: Record<string, unknown>, base: string, raw: string)
   if (m[3]) setPath(data, `${base}.lastName`, m[3].trim())
 }
 
-const valueAt = (data: Record<string, unknown>, path: string): unknown =>
-  path.split('.').reduce<unknown>((o, k) => (o && typeof o === 'object' ? (o as Record<string, unknown>)[k] : undefined), data)
-
 /** Map one row's cells through `headers`. Shared by classroom sheets and the card sheet. */
 const mapCells = (
   headers: string[],
@@ -295,27 +371,44 @@ const mapCells = (
   unmapped: Record<string, string>,
   warnings: string[],
   errors: string[],
-  opts: { only?: (field: string) => boolean; keyPrefix?: string } = {},
+  opts: {
+    only?: (field: string) => boolean
+    keyPrefix?: string
+    /** Header (without prefix) whose unmapped values are never kept in dlaRaw. */
+    dropRaw?: RegExp
+    /** Collects scout-column hits, resolved per row by `resolveScout`. */
+    scout?: string[]
+  } = {},
 ): void => {
   headers.forEach((header, i) => {
     const raw = (cells[i] ?? '').trim()
     if (!raw) return
     const key = `${opts.keyPrefix ?? ''}${header || `คอลัมน์ ${i + 1}`}`
-    const rule = ruleFor(header)
-    if (!rule) {
+    // dlaRaw PII guard: never keep a national-ID-like value or a dropped column raw.
+    const keepRaw = () => {
+      if (looksLikeNationalId(raw) || opts.dropRaw?.test(header)) return
       unmapped[key] = raw
-      return
     }
+    const rule = ruleFor(header)
+    if (!rule) return keepRaw()
     if (opts.only && !opts.only(rule.field)) return
     const out = normalize(rule, raw, header)
     if (out.warning) warnings.push(out.warning)
     if (!out.ok) {
       if (out.error) errors.push(out.error)
-      unmapped[key] = raw
-      return
+      return keepRaw()
     }
     if (out.value === undefined) return
     if (rule.kind === 'fullName') return applyFullName(data, rule.field, String(out.value))
+    if (rule.kind === 'scout') {
+      opts.scout?.push(String(out.value))
+      return
+    }
+    if (rule.kind === 'ability') {
+      const prev = valueAt(data, rule.field)
+      setPath(data, rule.field, prev ? `${String(prev)}\n${String(out.value)}` : out.value)
+      return
+    }
     if (rule.kind === 'disability') {
       const list = (valueAt(data, rule.field) as string[] | undefined) ?? []
       if (!list.includes(String(out.value))) setPath(data, rule.field, [...list, out.value])
@@ -358,7 +451,7 @@ export const mapDla = (sheets: DlaSheet[], card: DlaCardSheet | null): MappedShe
       if (rule?.field === 'nationalId' && cardNid < 0) cardNid = i
       if (rule?.field === 'studentId' && cardSid < 0) cardSid = i
       if (rule && rule.field.startsWith('cardDates.')) mappedFields.add(rule.field)
-      if (!rule && h) unmappedColumns.add(`card / ${h}`)
+      if (!rule && h && !CARD_DROP_RAW.test(h)) unmappedColumns.add(`card / ${h}`)
     })
     for (const r of card.rows) {
       const nid = cardNid >= 0 ? normalizeNationalId(r.cells[cardNid]) : ''
@@ -375,7 +468,9 @@ export const mapDla = (sheets: DlaSheet[], card: DlaCardSheet | null): MappedShe
       const unmapped: Record<string, string> = {}
       const warnings: string[] = []
       const errors: string[] = []
-      mapCells(s.headers, src.cells, data, unmapped, warnings, errors)
+      const scout: string[] = []
+      mapCells(s.headers, src.cells, data, unmapped, warnings, errors, { scout })
+      resolveScout(scout, data, warnings)
 
       const nationalId = String(data.nationalId ?? '')
       const studentId = String(data.studentId ?? '')
@@ -384,6 +479,7 @@ export const mapDla = (sheets: DlaSheet[], card: DlaCardSheet | null): MappedShe
         mapCells(card.headers, cardRow.cells, data, unmapped, warnings, errors, {
           only: (f) => f.startsWith('cardDates.'),
           keyPrefix: 'card / ',
+          dropRaw: CARD_DROP_RAW,
         })
       }
 

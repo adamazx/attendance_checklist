@@ -6,8 +6,9 @@
  *    studentId, unknown classroom) → `errors`, not written;
  *  - the same national ID more than once in the file: identical rows collapse
  *    (`duplicates`); rows that differ (e.g. two rooms) → `conflicts`, all skipped;
- *  - studentId ↔ nationalId disagreement (in the file or against the DB) →
- *    `idConflicts`, skipped;
+ *  - one studentId with different national IDs in the file → every such row in
+ *    `idConflicts` (checked before row validation, so error rows are included);
+ *  - studentId ↔ nationalId disagreement against the DB → `idConflicts`, skipped;
  *  - otherwise create, update (national ID match, or a DB student with the same
  *    studentId and no national ID yet = link), or unchanged.
  * Students in the DB but not in the file are left alone.
@@ -81,9 +82,33 @@ export const planDla = (rows: MappedRow[], existing: ExistingStudent[], resolveR
     message,
   })
 
+  // 0. studentId shared by different national IDs anywhere in the file — checked over
+  //    ALL rows before validation, so every row of such a group is skipped the same
+  //    way even when one of them also has a row error. (Two DLA records with one
+  //    studentId: the school must correct DLA.) Same studentId + same national ID
+  //    is the national-ID dedupe's case (step 2), not this one.
+  const sidRows = new Map<string, MappedRow[]>()
+  for (const row of rows) {
+    if (row.studentId) sidRows.set(row.studentId, [...(sidRows.get(row.studentId) ?? []), row])
+  }
+  const sharedSid = new Set(
+    [...sidRows].filter(([, rs]) => new Set(rs.map((r) => r.nationalId)).size > 1).map(([sid]) => sid),
+  )
+
   // 1. Row-level validation.
   const valid: Array<{ row: MappedRow; room: { id: number | string; name: string }; warnings: string[] }> = []
   for (const row of rows) {
+    if (sharedSid.has(row.studentId)) {
+      const where = (sidRows.get(row.studentId) ?? []).map((r) => `${r.sheet} แถว ${r.rowNo}`).join(', ')
+      const rowErrs = row.errors.length > 0 ? ` · แถวนี้มีข้อผิดพลาดด้วย: ${row.errors.join(' · ')}` : ''
+      plan.idConflicts.push(
+        issue(
+          row,
+          `เลขประจำตัวนักเรียน ${row.studentId} ถูกใช้กับเลขประจำตัวประชาชนหลายเลขในไฟล์ (${where}) — ข้าม โปรดแก้ไขใน DLA${rowErrs}`,
+        ),
+      )
+      continue
+    }
     const errs = [...row.errors]
     const warnings = [...row.warnings]
     if (!row.nationalId) errs.unshift('ไม่มีเลขประจำตัวประชาชน')
@@ -132,18 +157,11 @@ export const planDla = (rows: MappedRow[], existing: ExistingStudent[], resolveR
     }
   }
 
-  // 3. studentId used by different national IDs within the file.
-  const sidOwners = new Map<string, Set<string>>()
-  for (const u of unique) sidOwners.set(u.row.studentId, (sidOwners.get(u.row.studentId) ?? new Set()).add(u.row.nationalId))
-
+  // 3. Match against the DB.
   const dbByNid = new Map(existing.filter((e) => e.nationalId).map((e) => [e.nationalId as string, e]))
   const dbBySid = new Map(existing.map((e) => [e.studentId, e]))
 
   for (const { row, room, warnings } of unique) {
-    if ((sidOwners.get(row.studentId)?.size ?? 0) > 1) {
-      plan.idConflicts.push(issue(row, `เลขประจำตัวนักเรียน ${row.studentId} ถูกใช้กับเลขประจำตัวประชาชนหลายเลขในไฟล์ — ข้าม`))
-      continue
-    }
     const byN = dbByNid.get(row.nationalId)
     const byS = dbBySid.get(row.studentId)
     let target: ExistingStudent | undefined
