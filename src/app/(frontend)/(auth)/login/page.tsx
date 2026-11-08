@@ -3,6 +3,7 @@ import React from 'react'
 
 import { LoginForm } from '@/components/auth/LoginForm'
 import { getCurrentUser } from '@/lib/auth/currentUser'
+import { SCHOOL_FULL_NAME } from '@/lib/school'
 
 export const metadata = { title: 'เข้าสู่ระบบ | ระบบครูที่ปรึกษา' }
 
@@ -17,7 +18,7 @@ export default async function LoginPage() {
             📘
           </div>
           <h1 className="mt-2 text-xl font-bold">ระบบครูที่ปรึกษา</h1>
-          <p className="mt-1 text-sm text-gold-soft">โรงเรียนโนนหันวิทยายน องค์การบริหารส่วนจังหวัดขอนแก่น</p>
+          <p className="mt-1 text-sm text-gold-soft">{SCHOOL_FULL_NAME}</p>
         </div>
         <LoginForm />
       </div>

@@ -4,7 +4,7 @@ Project memory for Claude Code. Keep concise. Modular rules live in `.claude/rul
 
 ## Project
 
-**Advisor Attendance System** (ระบบครูที่ปรึกษา) — a Thai-language web app for homeroom advisors (ครูที่ปรึกษา) at **โรงเรียนโนนหันวิทยายน**, **อบจ.ขอนแก่น** to take and manage daily student attendance, with reports, statistics, and charts.
+**Advisor Attendance System** (ระบบครูที่ปรึกษา) — a Thai-language web app for homeroom advisors (ครูที่ปรึกษา) at **โรงเรียนมัธยมหนองเขียด**, **อบจ.ขอนแก่น** to take and manage daily student attendance, with reports, statistics, and charts.
 
 - UI is **Thai-language** throughout.
 - Dates always render in **Buddhist-era (พ.ศ.)** with Thai month names.

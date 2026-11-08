@@ -41,7 +41,7 @@ test('plain template: Sarabun, orientation, letterhead first, no signature block
   assert.equal(def.pageOrientation, 'landscape')
   const content = def.content as unknown[]
   assert.equal(content.length, 2) // letterhead + one table block, nothing after
-  assert.match(JSON.stringify(content[0]), /โรงเรียนโนนหันวิทยายน/)
+  assert.match(JSON.stringify(content[0]), /โรงเรียนมัธยมหนองเขียด/)
   assert.match(JSON.stringify(content[0]), /องค์การบริหารส่วนจังหวัดขอนแก่น/)
   const body = JSON.stringify(content[1])
   assert.match(body, /66\.7%/)

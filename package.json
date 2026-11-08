@@ -1,7 +1,7 @@
 {
   "name": "attendance-checklist",
   "version": "0.1.0",
-  "description": "Advisor Attendance System (ระบบครูที่ปรึกษา) — โรงเรียนโนนหันวิทยายน",
+  "description": "Advisor Attendance System (ระบบครูที่ปรึกษา) — โรงเรียนมัธยมหนองเขียด",
   "license": "MIT",
   "type": "module",
   "scripts": {

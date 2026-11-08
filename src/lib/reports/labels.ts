@@ -3,6 +3,7 @@
  * exactly the same thing. Pure (no React), so the node test runner can load them.
  */
 import { formatThaiDay } from '../date/thaiDay.ts'
+import { SCHOOL_AFFILIATION as AFFILIATION, SCHOOL_NAME as NAME } from '../school.ts'
 
 import type { ActivityFilter } from './aggregate.ts'
 import type { DateRange } from './dateRange.ts'
@@ -38,5 +39,5 @@ export const EMPTY_RECORDS = 'ไม่มีข้อมูลเช็คช�
 export const EMPTY_LATE = 'ไม่มีนักเรียนมาสายในช่วงวันที่เลือก'
 export const EMPTY_STUDENTS = 'ไม่พบนักเรียนในห้องนี้'
 
-export const SCHOOL_NAME = 'โรงเรียนโนนหันวิทยายน'
-export const SCHOOL_AFFILIATION = 'สังกัด องค์การบริหารส่วนจังหวัดขอนแก่น'
+export const SCHOOL_NAME = NAME
+export const SCHOOL_AFFILIATION = `สังกัด ${AFFILIATION}`

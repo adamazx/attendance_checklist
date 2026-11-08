@@ -16,6 +16,7 @@ import {
   activityFilterLabel,
   formatRange,
 } from '@/components/reports/ReportParts'
+import { SCHOOL_FULL_NAME } from '@/lib/school'
 
 export const metadata = { title: 'รายงานนักเรียน | ระบบครูที่ปรึกษา' }
 
@@ -59,7 +60,7 @@ export default async function Page(props: { searchParams: ReportSearchParams }) 
 
   return (
     <div className="mt-6">
-      <p className="hidden text-center text-sm print:block">โรงเรียนโนนหันวิทยายน องค์การบริหารส่วนจังหวัดขอนแก่น</p>
+      <p className="hidden text-center text-sm print:block">{SCHOOL_FULL_NAME}</p>
       <ReportHeading title={TITLE} />
       <ReportFilters
         activities={activities}

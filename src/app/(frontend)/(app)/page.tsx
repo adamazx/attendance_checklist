@@ -3,6 +3,7 @@ import React from 'react'
 import { HomeTile, type HomeTileProps } from '@/components/shell/HomeTile'
 import { requireUser } from '@/lib/auth/currentUser'
 import { formatThaiDateTime } from '@/lib/date/thaiDay'
+import { SCHOOL_FULL_NAME } from '@/lib/school'
 
 const classroomReportTile: HomeTileProps = {
   href: '/reports/classroom',
@@ -72,7 +73,7 @@ export default async function HomePage() {
       <section className="mt-5 rounded-xl border-t-4 border-brand-gold bg-gradient-to-br from-brand-red to-brand-red-dark px-5 pt-6 pb-11 text-center text-on-dark shadow-card">
         <h1 className="text-2xl font-bold sm:text-3xl">ระบบครูที่ปรึกษา</h1>
         <p className="mx-auto mt-1.5 mb-3.5 max-w-xl text-gold-soft">
-          โรงเรียนโนนหันวิทยายน องค์การบริหารส่วนจังหวัดขอนแก่น
+          {SCHOOL_FULL_NAME}
         </p>
         <span className="inline-block rounded-full border border-brand-gold bg-brand-gold/20 px-4 py-1.5 text-sm font-medium text-gold-pale">
           วันที่ {formatThaiDateTime(new Date())}
