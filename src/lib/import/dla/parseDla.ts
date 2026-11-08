@@ -6,7 +6,8 @@
  * - The `card` sheet (print-card issue/expiry dates) is returned separately.
  * - Each classroom sheet has a 3-row merged header; data starts on row 4. Header
  *   cells are filled forward across merges and joined into a path such as
- *   "บิดา / ชื่อ", which the column mapping matches on.
+ *   "บิดา / ชื่อ", which the column mapping matches on. A report-title row merged
+ *   from column 0 is dropped from the paths.
  */
 import type * as XLSX from 'xlsx'
 
@@ -36,9 +37,22 @@ export const headerPaths = (sheet: XLSX.WorkSheet, grid: string[][], headerRows:
     }
   }
 
+  // The real export's first header row is a report title ("รายงานรายละเอียดข้อมูล…")
+  // merged horizontally from column 0 across many columns. It carries no column
+  // meaning, so it is left out of those columns' paths (real column groups never
+  // start at column 0 and span sideways in row 1).
+  const titleCols = new Set<number>()
+  if (headerRows > 1) {
+    for (const m of sheet['!merges'] ?? []) {
+      if (m.s.r === 0 && m.e.r === 0 && m.s.c === 0 && m.e.c > 0) {
+        for (let c = 0; c <= m.e.c && c < width; c++) titleCols.add(c)
+      }
+    }
+  }
+
   return Array.from({ length: width }, (_, c) => {
     const parts: string[] = []
-    for (let r = 0; r < headerRows; r++) {
+    for (let r = titleCols.has(c) ? 1 : 0; r < headerRows; r++) {
       const v = filled[r][c]
       if (v && parts[parts.length - 1] !== v) parts.push(v)
     }
