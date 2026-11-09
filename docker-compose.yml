@@ -17,5 +17,52 @@ services:
       timeout: 5s
       retries: 10
 
+  # ---------------------------------------------------------------------------
+  # LOCAL DEV ONLY — an S3-compatible stand-in for testing @payloadcms/storage-s3.
+  # Never use SeaweedFS (or these committed dev credentials) in production:
+  # production uses a private Cloudflare R2 / AWS S3 bucket.
+  # Not started by plain `docker compose up -d postgres`; run
+  #   docker compose up -d seaweedfs seaweedfs-init
+  # ---------------------------------------------------------------------------
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    container_name: attendance_seaweedfs
+    restart: unless-stopped
+    # Master + volume + filer + S3 in one process. S3 auth comes from s3.json:
+    # exactly one dev identity, NO anonymous identity → unsigned requests are denied.
+    command: server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+    ports:
+      # Publish ONLY the S3 API, and only on localhost (the dev credentials are
+      # committed). Master/volume/filer ports stay internal to the container.
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - attendance_seaweeddata:/data
+      - ./docker/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+
+  # One-shot: create the PRIVATE dev bucket (idempotent). No bucket policy, no ACL.
+  seaweedfs-init:
+    image: amazon/aws-cli:2.39.1@sha256:3517c17b5f01637df3b6184a4280fbcc36e4ea38105954cade628ff17bb9a7b9
+    depends_on:
+      - seaweedfs
+    restart: "no"
+    environment:
+      AWS_ACCESS_KEY_ID: attendance-dev
+      AWS_SECRET_ACCESS_KEY: attendance-dev-only
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        S3="aws --endpoint-url http://seaweedfs:8333"
+        n=0
+        until $$S3 s3api list-buckets >/dev/null 2>&1; do
+          n=$$((n+1)); [ $$n -ge 60 ] && echo "seaweedfs S3 not ready" && exit 1
+          sleep 1
+        done
+        $$S3 s3api head-bucket --bucket student-photos-dev 2>/dev/null \
+          || $$S3 s3api create-bucket --bucket student-photos-dev
+        echo "bucket student-photos-dev ready (private)"
+
 volumes:
   attendance_pgdata:
+  attendance_seaweeddata:
