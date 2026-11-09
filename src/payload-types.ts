@@ -373,7 +373,7 @@ export interface Student {
   createdAt: string;
 }
 /**
- * รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 5MB)
+ * รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 4MB)
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "student-photos".

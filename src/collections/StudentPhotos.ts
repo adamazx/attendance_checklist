@@ -69,7 +69,7 @@ export const StudentPhotos: CollectionConfig = {
   admin: {
     group: 'ข้อมูลหลัก',
     defaultColumns: ['filename', 'student', 'updatedAt'],
-    description: 'รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 5MB)',
+    description: 'รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 4MB)',
   },
   access: {
     read: photoRead,
