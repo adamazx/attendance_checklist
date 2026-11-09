@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "attendance-dev",
+      "credentials": [
+        {
+          "accessKey": "attendance-dev",
+          "secretKey": "attendance-dev-only"
+        }
+      ],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

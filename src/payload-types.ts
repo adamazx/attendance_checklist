@@ -373,7 +373,7 @@ export interface Student {
   createdAt: string;
 }
 /**
- * รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 5MB)
+ * รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 4MB)
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "student-photos".
@@ -384,6 +384,8 @@ export interface StudentPhoto {
    * นักเรียนหนึ่งคนมีรูปได้หนึ่งรูป
    */
   student: number | Student;
+  prefix?: string | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -766,6 +768,8 @@ export interface StudentsSelect<T extends boolean = true> {
  */
 export interface StudentPhotosSelect<T extends boolean = true> {
   student?: T;
+  prefix?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
