@@ -363,6 +363,53 @@ const applyFullName = (data: Record<string, unknown>, base: string, raw: string)
   if (m[3]) setPath(data, `${base}.lastName`, m[3].trim())
 }
 
+/**
+ * Parents-status rule: the real export's TOP-LEVEL "สถานภาพ" column (not under a
+ * บิดา/มารดา group) is the PARENTS' marital status as one label. It sets
+ * `household.father|mother.maritalStatus` (guardian never). Unlike `MARITAL`, a
+ * one-parent death label marks only that parent. A per-parent สถานภาพ value already
+ * mapped wins; a disagreement is a row warning. Unknown label → warning, nothing set,
+ * raw value kept in dlaRaw.
+ *
+ * To switch it off (school decides not to import this), set `enabled: false`: the
+ * column then goes back to dlaRaw as an unmapped column.
+ */
+type Parent = 'father' | 'mother'
+export const parentsStatusRule = {
+  enabled: true,
+  /** The header path, title already stripped by the parser. */
+  matches: (header: string): boolean => /^\s*สถานภาพ\s*$/.test(header),
+  /** Label (spaces/dashes removed) → status per parent. */
+  labels: new Map<string, Partial<Record<Parent, string>>>([
+    ['อยู่ด้วยกัน', { father: 'married', mother: 'married' }],
+    ['หย่าร้าง', { father: 'divorced', mother: 'divorced' }],
+    ['แยกกันอยู่', { father: 'separated', mother: 'separated' }],
+    ['บิดาถึงแก่กรรม', { father: 'deceased' }],
+    ['มารดาถึงแก่กรรม', { mother: 'deceased' }],
+    ['บิดามารดาถึงแก่กรรม', { father: 'deceased', mother: 'deceased' }],
+  ]),
+  /** Apply one row's value. Returns false when the label is unknown (caller keeps it raw). */
+  apply(raw: string, header: string, data: Record<string, unknown>, warnings: string[]): boolean {
+    const target = this.labels.get(raw.replace(/[\s​\-–—]/g, ''))
+    if (!target) {
+      warnings.push(`"${header}": ค่า "${raw}" ไม่อยู่ในตัวเลือกสถานภาพบิดา-มารดา — ไม่ได้บันทึก (เก็บค่าเดิมไว้)`)
+      return false
+    }
+    for (const parent of ['father', 'mother'] as const) {
+      const value = target[parent]
+      if (!value) continue
+      const field = `household.${parent}.maritalStatus`
+      const current = valueAt(data, field)
+      if (current === undefined) setPath(data, field, value)
+      else if (current !== value) {
+        const who = parent === 'father' ? 'บิดา' : 'มารดา'
+        warnings.push(`"${header}": "${raw}" ไม่ตรงกับสถานภาพ${who}ในคอลัมน์ของ${who} — ใช้ค่าของ${who}`)
+      }
+    }
+    return true
+  },
+}
+
 /** Map one row's cells through `headers`. Shared by classroom sheets and the card sheet. */
 const mapCells = (
   headers: string[],
@@ -378,6 +425,8 @@ const mapCells = (
     dropRaw?: RegExp
     /** Collects scout-column hits, resolved per row by `resolveScout`. */
     scout?: string[]
+    /** Collects the top-level parents-status cell, applied per row after all columns. */
+    parentsStatus?: Array<{ header: string; key: string; raw: string }>
   } = {},
 ): void => {
   headers.forEach((header, i) => {
@@ -388,6 +437,10 @@ const mapCells = (
     const keepRaw = () => {
       if (looksLikeNationalId(raw) || opts.dropRaw?.test(header)) return
       unmapped[key] = raw
+    }
+    if (opts.parentsStatus && parentsStatusRule.enabled && parentsStatusRule.matches(header)) {
+      opts.parentsStatus.push({ header, key, raw })
+      return
     }
     const rule = ruleFor(header)
     if (!rule) return keepRaw()
@@ -435,6 +488,7 @@ export const mapDla = (sheets: DlaSheet[], card: DlaCardSheet | null): MappedShe
   const mappedFields = new Set<string>()
   for (const s of sheets) {
     for (const h of s.headers) {
+      if (parentsStatusRule.enabled && parentsStatusRule.matches(h)) continue
       const rule = ruleFor(h)
       if (rule) mappedFields.add(rule.kind === 'fullName' ? `${rule.field}.firstName` : rule.field)
       else if (h) unmappedColumns.add(h)
@@ -469,8 +523,15 @@ export const mapDla = (sheets: DlaSheet[], card: DlaCardSheet | null): MappedShe
       const warnings: string[] = []
       const errors: string[] = []
       const scout: string[] = []
-      mapCells(s.headers, src.cells, data, unmapped, warnings, errors, { scout })
+      const parentsStatus: Array<{ header: string; key: string; raw: string }> = []
+      mapCells(s.headers, src.cells, data, unmapped, warnings, errors, { scout, parentsStatus })
       resolveScout(scout, data, warnings)
+      // After all columns, so a per-parent สถานภาพ column always takes precedence.
+      for (const p of parentsStatus) {
+        if (!parentsStatusRule.apply(p.raw, p.header, data, warnings) && !looksLikeNationalId(p.raw)) {
+          unmapped[p.key] = p.raw
+        }
+      }
 
       const nationalId = String(data.nationalId ?? '')
       const studentId = String(data.studentId ?? '')
