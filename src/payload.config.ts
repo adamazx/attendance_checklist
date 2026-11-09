@@ -2,6 +2,7 @@
 import { postgresAdapter, sql } from '@payloadcms/db-postgres'
 import { uniqueIndex } from '@payloadcms/db-postgres/drizzle/pg-core'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { s3Storage } from '@payloadcms/storage-s3'
 import { en } from '@payloadcms/translations/languages/en'
 import { th } from '@payloadcms/translations/languages/th'
 import path from 'path'
@@ -18,6 +19,7 @@ import { Student } from './collections/Student'
 import { StudentPhotos } from './collections/StudentPhotos'
 import { Term } from './collections/Term'
 import { Users } from './collections/Users'
+import { readS3Env } from './lib/storage/s3Env'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -38,6 +40,9 @@ const extraOrigins = (process.env.CSRF_ALLOWED_ORIGINS ?? '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
+
+/** Student-photo storage: private S3-compatible bucket when S3_* is set, else local disk (dev). */
+const s3 = readS3Env(process.env)
 
 export default buildConfig({
   serverURL,
@@ -109,5 +114,26 @@ export default buildConfig({
     },
   }),
   sharp,
-  plugins: [],
+  plugins: [
+    s3Storage({
+      // Env-gated: without S3_* vars the collection keeps local disk exactly as before.
+      enabled: s3 !== null,
+      // Add the plugin's `prefix` / `_objectKey` columns whether or not a bucket is
+      // configured, so the DB schema (and migrations) never depend on env vars.
+      alwaysInsertFields: true,
+      collections: {
+        // Minors' photos stay private:
+        // - disablePayloadAccessControl is NOT set (false): files and thumbnails are
+        //   served only via /api/student-photos/file/… after the collection's read access.
+        // - signedDownloads false: never hand out presigned bucket URLs.
+        // - no prefix / generateFileURL: no public bucket URL is ever generated.
+        'student-photos': { signedDownloads: false },
+      },
+      bucket: s3?.bucket ?? '',
+      config: s3?.config ?? {},
+      // Uploads pass through Payload (validation, UUID rename, size cap).
+      clientUploads: false,
+      // `acl` deliberately omitted: no ACL header is sent; the bucket itself must be private.
+    }),
+  ],
 })

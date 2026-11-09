@@ -384,6 +384,8 @@ export interface StudentPhoto {
    * นักเรียนหนึ่งคนมีรูปได้หนึ่งรูป
    */
   student: number | Student;
+  prefix?: string | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -766,6 +768,8 @@ export interface StudentsSelect<T extends boolean = true> {
  */
 export interface StudentPhotosSelect<T extends boolean = true> {
   student?: T;
+  prefix?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

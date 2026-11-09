@@ -9,10 +9,16 @@
  * - Stored files are renamed to a random UUID, so URLs and the disk never carry a
  *   student or national ID.
  *
- * Storage: local disk (media/student-photos, gitignored) — DEV ONLY. Vercel's
- * filesystem is ephemeral, so production needs a storage adapter before photos go
- * live: a private S3-compatible bucket via @payloadcms/storage-s3, served through
- * Payload's access check (not installed yet — decision D6).
+ * Storage (decision D6) is selected by env in payload.config.ts (`readS3Env`):
+ *  - all S3_* vars set → S3-compatible bucket (R2 / AWS S3 / SeaweedFS in dev) via
+ *    @payloadcms/storage-s3;
+ *  - none set → local disk (media/student-photos, gitignored) — DEV ONLY, Vercel's
+ *    filesystem is ephemeral;
+ *  - some set → startup error.
+ * Either way, files and thumbnails are served only through Payload's access-checked
+ * file route — no public or signed bucket URLs, no client uploads. The bucket MUST
+ * be private in every environment (no public access, no public ACLs/policies).
+ * Docs uploaded while on one storage are not visible from the other (dev: re-upload).
  *
  * Not built yet — bulk import seam: a folder/zip of photos named by **studentId**
  * (decision D5; not national ID, which would put a 13-digit PII number in file
@@ -79,6 +85,13 @@ export const StudentPhotos: CollectionConfig = {
     mimeTypes: ['image/jpeg', 'image/png'],
     imageSizes: [{ name: 'thumbnail', width: 240 }],
     adminThumbnail: 'thumbnail',
+    // Minors' photos: never cached by a CDN/shared cache, nor kept in the browser
+    // cache of a shared school computer after logout. Applied by Payload's
+    // local-disk file handler and by storage-s3's handler (200/206 and 304).
+    modifyResponseHeaders: ({ headers }) => {
+      headers.set('Cache-Control', 'private, no-store')
+      return headers
+    },
   },
   fields: [
     {
