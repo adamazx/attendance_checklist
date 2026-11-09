@@ -10,7 +10,7 @@ import { test } from 'node:test'
 import { parseBEDate } from '../../date/buddhistDate.ts'
 
 import { REAL_IDS, REAL_NID_HEADER, REAL_TITLE, buildRealLayoutDla } from './__fixtures__/realLayoutDla.ts'
-import { mapDla, ruleFor } from './dlaMapping.ts'
+import { mapDla, parentsStatusRule, ruleFor } from './dlaMapping.ts'
 import { parseDla } from './parseDla.ts'
 import { planDla, type RoomResolver } from './planDla.ts'
 
@@ -117,5 +117,100 @@ test('dlaRaw PII guard: no 13-digit value, no card full name', () => {
   for (const w of plan.writes) {
     const raw = JSON.stringify(w.data.dlaRaw)
     assert.ok(!Object.values(REAL_IDS).some((id) => raw.includes(id)))
+  }
+})
+
+const statusOf = (data: Record<string, unknown>) => {
+  const h = (data.household ?? {}) as Record<string, Record<string, unknown> | undefined>
+  return { father: h.father?.maritalStatus, mother: h.mother?.maritalStatus, guardian: h.guardian?.maritalStatus }
+}
+const applyStatus = (raw: string, data: Record<string, unknown> = {}) => {
+  const warnings: string[] = []
+  const ok = parentsStatusRule.apply(raw, 'สถานภาพ', data, warnings)
+  return { ok, warnings, ...statusOf(data) }
+}
+
+test('parents status: every label → father / mother; guardian never', () => {
+  const cases: Array<[string, unknown, unknown]> = [
+    ['อยู่ด้วยกัน', 'married', 'married'],
+    ['หย่าร้าง', 'divorced', 'divorced'],
+    ['แยกกันอยู่', 'separated', 'separated'],
+    ['บิดาถึงแก่กรรม', 'deceased', undefined],
+    ['มารดาถึงแก่กรรม', undefined, 'deceased'],
+    ['บิดา-มารดาถึงแก่กรรม', 'deceased', 'deceased'],
+    // spacing / dash variants
+    ['บิดา - มารดา ถึงแก่กรรม', 'deceased', 'deceased'],
+    ['บิดา–มารดาถึงแก่กรรม', 'deceased', 'deceased'],
+    ['บิดามารดาถึงแก่กรรม', 'deceased', 'deceased'],
+    [' แยกกัน อยู่ ', 'separated', 'separated'],
+  ]
+  for (const [raw, father, mother] of cases) {
+    const r = applyStatus(raw)
+    assert.equal(r.ok, true, raw)
+    assert.deepEqual(r.warnings, [], raw)
+    assert.equal(r.father, father, `${raw} father`)
+    assert.equal(r.mother, mother, `${raw} mother`)
+    assert.equal(r.guardian, undefined, `${raw} guardian`)
+  }
+})
+
+test('parents status: บิดาถึงแก่กรรม does not touch mother (nor her other fields)', () => {
+  const data: Record<string, unknown> = { household: { mother: { firstName: 'zแม่' } } }
+  const r = applyStatus('บิดาถึงแก่กรรม', data)
+  assert.equal(r.father, 'deceased')
+  assert.deepEqual((data.household as Record<string, unknown>).mother, { firstName: 'zแม่' })
+  assert.equal(applyStatus('มารดาถึงแก่กรรม').father, undefined)
+})
+
+test('parents status: per-parent value wins; disagreement warns, agreement does not', () => {
+  const data: Record<string, unknown> = { household: { mother: { maritalStatus: 'married' } } }
+  const r = applyStatus('หย่าร้าง', data)
+  assert.equal(r.father, 'divorced', 'unset parent still filled')
+  assert.equal(r.mother, 'married', 'per-parent value kept')
+  assert.equal(r.warnings.length, 1)
+  assert.ok(/มารดา/.test(r.warnings[0]))
+  const same = applyStatus('อยู่ด้วยกัน', { household: { father: { maritalStatus: 'married' } } })
+  assert.deepEqual(same.warnings, [])
+})
+
+test('parents status: unknown label → warning, nothing set; empty → nothing', () => {
+  const r = applyStatus('zไม่ทราบ')
+  assert.equal(r.ok, false)
+  assert.equal(r.warnings.length, 1)
+  assert.equal(r.father, undefined)
+  assert.equal(r.mother, undefined)
+  assert.equal(statusOf(rowOf('zr100').data).father, undefined)
+  assert.ok(rowOf('zr100').warnings.some((w) => /สถานภาพ/.test(w)))
+  assert.equal(rowOf('zr100').unmapped['สถานภาพ'], 'zไม่ทราบสถานะ', 'unknown kept raw')
+})
+
+test('parents status: real-layout rows mapped, column out of dlaRaw', () => {
+  assert.deepEqual(statusOf(rowOf('zr001').data), { father: 'married', mother: 'married', guardian: undefined })
+  assert.deepEqual(statusOf(rowOf('zr002').data), { father: 'deceased', mother: undefined, guardian: undefined })
+  assert.deepEqual(statusOf(rowOf('zr003').data), { father: 'deceased', mother: 'deceased', guardian: undefined })
+  const z4 = rowOf('zr004', 'd1-2')
+  assert.deepEqual(statusOf(z4.data), { father: 'divorced', mother: 'married', guardian: undefined })
+  assert.ok(z4.warnings.some((w) => /ไม่ตรงกับสถานภาพมารดา/.test(w)))
+  for (const sid of ['zr001', 'zr002', 'zr003']) assert.equal(rowOf(sid).unmapped['สถานภาพ'], undefined, sid)
+  assert.equal(z4.unmapped['สถานภาพ'], undefined)
+  assert.ok(!mapped.unmappedColumns.includes('สถานภาพ'))
+  assert.deepEqual(
+    plan.creates.map((e) => e.studentId),
+    ['zr001', 'zr002', 'zr003', 'zr004'],
+    'plan unchanged by the rule',
+  )
+})
+
+test('parents status: switched off → column back in dlaRaw, nothing set', () => {
+  parentsStatusRule.enabled = false
+  try {
+    const off = mapDla(parsed.sheets, parsed.card)
+    const z1 = off.rows.find((r) => r.studentId === 'zr001' && r.sheet === 'd1-1')
+    assert.ok(z1)
+    assert.equal(statusOf(z1.data).father, undefined)
+    assert.equal(z1.unmapped['สถานภาพ'], 'อยู่ด้วยกัน')
+    assert.ok(off.unmappedColumns.includes('สถานภาพ'))
+  } finally {
+    parentsStatusRule.enabled = true
   }
 })

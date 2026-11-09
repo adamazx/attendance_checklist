@@ -21,6 +21,10 @@
  *  - zr004 card issue date unreadable → warning, kept; red-cross cell with the
  *    negative mid-text ("สมาชิก (ไม่เป็น)") → not a member
  *  - `d5-3-` stale copy → skipped
+ *  - top-level "สถานภาพ" (parents' status): zr001 อยู่ด้วยกัน → both married; zr002
+ *    บิดาถึงแก่กรรม → father only; zr003 "บิดา - มารดา ถึงแก่กรรม" (spacing variant)
+ *    → both deceased; zr004 หย่าร้าง but its "มารดา / สถานภาพ" column says สมรส →
+ *    mother kept married + warning; zr100 (d1-1) unknown label → warning, kept raw
  */
 import * as XLSX from 'xlsx'
 
@@ -62,6 +66,7 @@ const COLS: Array<[string, string?]> = [
   ['ยุวกาชาด', 'ระดับ'],
   ['บิดา', 'ชื่อ'],
   ['บิดา', 'นามสกุล'],
+  ['มารดา', 'สถานภาพ'],
   ['สถานภาพ'],
   ['หมายเลขอ้างอิง'],
   ['ผู้ปกครอง', 'คำนำหน้า'],
@@ -104,6 +109,10 @@ interface Fake {
   scoutType?: string
   redCross?: string
   ref?: string
+  /** Top-level สถานภาพ (parents' status). Default อยู่ด้วยกัน. */
+  status?: string
+  /** Per-parent "มารดา / สถานภาพ". */
+  motherStatus?: string
 }
 
 const row = (no: number, s: Fake): Array<string | number> => [
@@ -127,7 +136,8 @@ const row = (no: number, s: Fake): Array<string | number> => [
   '',
   `zบิดา${s.sid}`,
   'zทดสอบ',
-  'อยู่ด้วยกัน',
+  s.motherStatus ?? '',
+  s.status ?? 'อยู่ด้วยกัน',
   s.ref ?? '',
   'นาง',
   `zผู้ปกครอง${s.sid}`,
@@ -147,9 +157,9 @@ export const buildRealLayoutDla = (bookType: 'xls' | 'xlsx' = 'xls'): ArrayBuffe
     wb,
     sheet([
       { sid: 'zr001', nid: REAL_IDS.zr001, male: true, music: 'zกีตาร์', scout: 'ลูกเสือ-เนตรนารี', scoutType: 'สามัญ', redCross: 'ไม่เป็นยุวกาชาด', ref: REAL_IDS.ref },
-      { sid: 'zr002', nid: REAL_IDS.zr002, male: false, music: 'zร้องเพลง', sport: 'zฟุตบอล', scout: 'ลูกเสือ-เนตรนารี', redCross: 'ไม่เป็นยุวกาชาด' },
-      { sid: 'zr003', nid: REAL_IDS.zr003, male: false, enroll: '16/05/2024', scout: 'ไม่เป็นลูกเสือ-เนตรนารี', redCross: 'ยุวกาชาด' },
-      { sid: 'zr100', nid: REAL_IDS.zr100a, male: true },
+      { sid: 'zr002', nid: REAL_IDS.zr002, male: false, music: 'zร้องเพลง', sport: 'zฟุตบอล', scout: 'ลูกเสือ-เนตรนารี', redCross: 'ไม่เป็นยุวกาชาด', status: 'บิดาถึงแก่กรรม' },
+      { sid: 'zr003', nid: REAL_IDS.zr003, male: false, enroll: '16/05/2024', scout: 'ไม่เป็นลูกเสือ-เนตรนารี', redCross: 'ยุวกาชาด', status: 'บิดา - มารดา ถึงแก่กรรม' },
+      { sid: 'zr100', nid: REAL_IDS.zr100a, male: true, status: 'zไม่ทราบสถานะ' },
     ]),
     'd1-1',
   )
@@ -157,7 +167,7 @@ export const buildRealLayoutDla = (bookType: 'xls' | 'xlsx' = 'xls'): ArrayBuffe
     wb,
     sheet([
       { sid: 'zr100', nid: REAL_IDS.zr100b, male: true, birth: '31/02/2557' },
-      { sid: 'zr004', nid: REAL_IDS.zr004, male: true, scout: 'ไม่เป็นลูกเสือ-เนตรนารี', redCross: 'สมาชิก (ไม่เป็น)' },
+      { sid: 'zr004', nid: REAL_IDS.zr004, male: true, scout: 'ไม่เป็นลูกเสือ-เนตรนารี', redCross: 'สมาชิก (ไม่เป็น)', status: 'หย่าร้าง', motherStatus: 'สมรส' },
     ]),
     'd1-2',
   )
