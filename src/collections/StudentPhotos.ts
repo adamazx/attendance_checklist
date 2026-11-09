@@ -20,11 +20,12 @@
  * be private in every environment (no public access, no public ACLs/policies).
  * Docs uploaded while on one storage are not visible from the other (dev: re-upload).
  *
- * Not built yet — bulk import seam: a folder/zip of photos named by **studentId**
- * (decision D5; not national ID, which would put a 13-digit PII number in file
- * names). For each file: find the student by `studentId` = file stem, then
- * create (or replace) its `student-photos` doc with `student` set. Unmatched
- * stems and duplicates are reported in a dry run first, like the DLA importer.
+ * Bulk import (decision D5): /admin/import-students → tab "รูปนักเรียน"
+ * (components/ImportStudents/PhotoImportPanel.tsx). Files are named by **studentId**
+ * — never national ID; 13-digit stems are refused in the browser and never sent.
+ * Dry run: POST /api/students/photo-match gets the stems only (no image bytes).
+ * Then each file is its own REST request (POST, or PATCH to replace), so every
+ * photo still passes the 4MB cap, mime check, UUID rename and admin-only write.
  */
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
@@ -83,6 +84,13 @@ export const StudentPhotos: CollectionConfig = {
   upload: {
     staticDir: path.resolve(dirname, '../../media/student-photos'),
     mimeTypes: ['image/jpeg', 'image/png'],
+    // Re-encode the stored ORIGINAL (phone photos can carry home GPS). With any
+    // resizeOptions set, Payload 3.92.1 (uploads/generateFileData.js) runs
+    // sharp(file).rotate().resize(...) on the original — rotate() applies the EXIF
+    // orientation first — and saves that buffer. sharp drops EXIF/GPS/XMP on output
+    // unless `withMetadata` is set: keep `withMetadata` UNSET on this collection.
+    // Without resizeOptions the original is stored byte-for-byte, metadata included.
+    resizeOptions: { width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true },
     imageSizes: [{ name: 'thumbnail', width: 240 }],
     adminThumbnail: 'thumbnail',
     // Minors' photos: never cached by a CDN/shared cache, nor kept in the browser

@@ -12,6 +12,7 @@ import type { ImportResult } from '@/lib/import/types'
 
 import { DlaImportPanel } from './DlaImportPanel'
 import { ResultTable, cardStyle } from './importUi'
+import { PhotoImportPanel } from './PhotoImportPanel'
 
 const TEMPLATE_HEADERS = [
   'เลขประจำตัว',
@@ -165,7 +166,7 @@ const RosterImportPanel: React.FC = () => {
 
 /** Admin import screen: the phase-1b roster import, or the DLA student-master export. */
 export const ImportStudentsClient: React.FC = () => {
-  const [format, setFormat] = useState<'roster' | 'dla'>('roster')
+  const [format, setFormat] = useState<'roster' | 'dla' | 'photos'>('roster')
   return (
     <div>
       <h1>นำเข้ารายชื่อนักเรียน</h1>
@@ -176,8 +177,13 @@ export const ImportStudentsClient: React.FC = () => {
         <Button buttonStyle={format === 'dla' ? 'primary' : 'secondary'} onClick={() => setFormat('dla')}>
           ไฟล์ DLA (ข้อมูลนักเรียนครบชุด)
         </Button>
+        <Button buttonStyle={format === 'photos' ? 'primary' : 'secondary'} onClick={() => setFormat('photos')}>
+          รูปนักเรียน
+        </Button>
       </div>
-      {format === 'roster' ? <RosterImportPanel /> : <DlaImportPanel />}
+      {format === 'roster' && <RosterImportPanel />}
+      {format === 'dla' && <DlaImportPanel />}
+      {format === 'photos' && <PhotoImportPanel />}
     </div>
   )
 }
