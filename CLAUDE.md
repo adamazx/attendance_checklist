@@ -30,7 +30,8 @@ Project memory for Claude Code. Keep concise. Modular rules live in `.claude/rul
 
 Package manager is **pnpm**. Start the local Postgres container **before** `pnpm dev`.
 
-- `docker compose up -d` — start local Docker Postgres (dev DB); run this first
+- `docker compose up -d` — start local Docker Postgres (dev DB) only; run this first
+- `docker compose --profile s3 up -d` — also start local SeaweedFS (dev S3 for student-photo storage; set the `S3_*` vars from `.env.example`). Stop it with `docker compose --profile s3 stop`
 - `pnpm dev` — start Next.js + Payload dev server (http://localhost:3000, admin at `/admin`)
 - `pnpm build` — production build
 - `pnpm start` — run the production build

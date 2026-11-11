@@ -21,12 +21,14 @@ services:
   # LOCAL DEV ONLY — an S3-compatible stand-in for testing @payloadcms/storage-s3.
   # Never use SeaweedFS (or these committed dev credentials) in production:
   # production uses a private Cloudflare R2 / AWS S3 bucket.
-  # Not started by plain `docker compose up -d postgres`; run
-  #   docker compose up -d seaweedfs seaweedfs-init
+  # Behind the "s3" profile: plain `docker compose up -d` starts only Postgres.
+  #   start:  docker compose --profile s3 up -d
+  #   stop:   docker compose --profile s3 stop
   # ---------------------------------------------------------------------------
   seaweedfs:
     image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
     container_name: attendance_seaweedfs
+    profiles: ["s3"]
     restart: unless-stopped
     # Master + volume + filer + S3 in one process. S3 auth comes from s3.json:
     # exactly one dev identity, NO anonymous identity → unsigned requests are denied.
@@ -42,6 +44,7 @@ services:
   # One-shot: create the PRIVATE dev bucket (idempotent). No bucket policy, no ACL.
   seaweedfs-init:
     image: amazon/aws-cli:2.39.1@sha256:3517c17b5f01637df3b6184a4280fbcc36e4ea38105954cade628ff17bb9a7b9
+    profiles: ["s3"]
     depends_on:
       - seaweedfs
     restart: "no"
