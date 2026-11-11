@@ -14,6 +14,8 @@ type MaybeUser = Pick<User, 'role'> | null | undefined
 
 export const isAdmin = (user: MaybeUser): boolean => user?.role === 'admin'
 
+export const isAdvisor = (user: MaybeUser): boolean => user?.role === 'advisor'
+
 export const isDiscipline = (user: MaybeUser): boolean => user?.role === 'discipline'
 
 export const isAdminOrDiscipline = (user: MaybeUser): boolean =>

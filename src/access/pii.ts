@@ -11,15 +11,19 @@
  * Writes are admin-only on every bundle (the collection is admin-write anyway; this
  * keeps it true even if collection access is ever widened).
  *
+ * PII reads are an ALLOW-list: only the roles named above get a bundle. An unknown
+ * or newly added role gets NO PII by default — grant it here explicitly if needed.
+ *
  * Note: `overrideAccess: true` skips field access too, so internal reads that
  * override access must `select` only the fields they need.
  */
 import type { FieldAccess } from 'payload'
 
-import { adminFieldAccess, isAdmin, isDiscipline } from './roles'
+import { adminFieldAccess, isAdmin, isAdvisor } from './roles.ts'
 
+/** Allow-list: admin or advisor only (never "anyone who isn't discipline"). */
 const adminOrAdvisor: FieldAccess = ({ req: { user } }) =>
-  Boolean(user) && (isAdmin(user) || !isDiscipline(user))
+  Boolean(user) && (isAdmin(user) || isAdvisor(user))
 
 export const adminWrite = { create: adminFieldAccess, update: adminFieldAccess }
 
