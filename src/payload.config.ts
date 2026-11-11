@@ -94,6 +94,22 @@ export default buildConfig({
     // never dev push — so the local DB and Neon follow the same path.
     push: false,
     migrationDir: path.resolve(dirname, 'migrations'),
+    // student_photos.student is required + unique (one photo per student, NOT NULL), so
+    // Payload's hard-coded ON DELETE SET NULL for relationship FKs can't apply: deleting
+    // a student deletes their photo row. The migrations already create this FK as
+    // CASCADE; declaring it here (on the raw column, before Payload builds the Drizzle
+    // table — so it stays the one inline FK, no duplicate) keeps `migrate:create` from
+    // emitting a SET NULL hunk.
+    beforeSchemaInit: [
+      ({ adapter, schema }) => {
+        const ref = adapter.rawTables.student_photos?.columns.student?.reference
+        if (!ref) {
+          throw new Error('student_photos.student FK not found — Payload schema changed; revisit beforeSchemaInit')
+        }
+        ref.onDelete = 'cascade'
+        return schema
+      },
+    ],
     // One attendance record per student per day per activity: homeroom (no activity)
     // and each activity are unique separately. Declared here, not as collection
     // `indexes`, because Payload can't express partial indexes; keeping them in the
