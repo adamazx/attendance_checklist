@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 
@@ -10,7 +11,7 @@ export function Navbar(props: { userName: string }) {
     <nav className="border-b-2 border-brand-gold bg-brand-red text-on-dark">
       <div className="mx-auto flex min-h-15 max-w-[1080px] items-center justify-between gap-3 px-4 py-2.5">
         <Link className="flex items-center gap-2.5 text-lg font-bold no-underline" href="/">
-          <span aria-hidden="true">📘</span>
+          <Image alt="" className="size-8 shrink-0" height={32} src="/brand/logo-mtyk-256.png" unoptimized width={32} />
           <span>ระบบครูที่ปรึกษา</span>
         </Link>
         <div className="flex items-center gap-3 font-medium">

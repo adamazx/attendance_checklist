@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import React from 'react'
 
 import { HomeTile, type HomeTileProps } from '@/components/shell/HomeTile'
@@ -81,12 +82,15 @@ export default async function HomePage() {
       </section>
 
       <div className="-mt-8 mb-2.5 flex justify-center">
-        <div
-          aria-label="ตราโรงเรียน"
-          className="flex size-21 items-center justify-center rounded-full border-4 border-brand-gold bg-bg-cream text-3xl shadow-card"
-          role="img"
-        >
-          📘
+        <div className="flex size-21 items-center justify-center overflow-hidden rounded-full border-4 border-brand-gold bg-bg-cream shadow-card">
+          <Image
+            alt="ตราโรงเรียนมัธยมหนองเขียด"
+            className="size-full object-contain"
+            height={256}
+            src="/brand/logo-mtyk-256.png"
+            unoptimized
+            width={256}
+          />
         </div>
       </div>
 
