@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import React from 'react'
 
@@ -14,9 +15,15 @@ export default async function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-brand-red-dark px-4 py-10">
       <div className="w-full max-w-sm overflow-hidden rounded-xl border-t-4 border-brand-gold bg-surface shadow-card">
         <div className="bg-brand-red px-6 py-6 text-center text-on-dark">
-          <div aria-hidden="true" className="text-3xl">
-            📘
-          </div>
+          <Image
+            alt=""
+            className="mx-auto size-16"
+            height={64}
+            priority
+            src="/brand/logo-mtyk-256.png"
+            unoptimized
+            width={64}
+          />
           <h1 className="mt-2 text-xl font-bold">ระบบครูที่ปรึกษา</h1>
           <p className="mt-1 text-sm text-gold-soft">{SCHOOL_FULL_NAME}</p>
         </div>
