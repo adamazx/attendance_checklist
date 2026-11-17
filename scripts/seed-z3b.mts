@@ -1,13 +1,20 @@
 /**
  * Phase 3b export test fixtures — an ISOLATED set, everything prefixed z3b-/Z3B-.
  *
- *   pnpm dlx tsx scripts/seed-z3b.mts <credentials-file>
+ *   pnpm dlx tsx scripts/seed-z3b.mts .local/z3b-credentials.txt
+ *
+ * LOCAL DEV ONLY: refuses to run (before connecting) unless DATABASE_URI points at a
+ * local Postgres and NODE_ENV is not production — see src/lib/dev/localDatabase.ts.
+ * Write the credentials file under .local/ (gitignored) or outside the repo.
  *
  * (Not `pnpm payload run`, which crashes on this setup.) Creates two advisors, two
  * classrooms in the active academic year, 5 + 1 students, one activity, and roll
  * calls over the last 5 weekdays covering all 5 statuses. Records are written as
  * their advisor through the Local API, so the snapshot and audit hooks run (audit
- * rows are created too). Passwords go only to <credentials-file>. Aborts if any Z3B
+ * rows are created too). Passwords go only to <credentials-file>, as plain text: one
+ * "<email>  <password>" line per advisor, then lines with the room/activity/student
+ * ids and the seeded days. To issue fresh passwords later, use
+ * scripts/rotate-fixture-passwords.mts. Aborts if any Z3B
  * classroom already exists. Never touches other data.
  *
  * Cleanup: delete the Z3B attendance records (and their audit_logs rows), students,
@@ -20,6 +27,9 @@ import { writeFile } from 'node:fs/promises'
 
 import type { AttendanceStatus } from '../src/lib/attendance/statuses.ts'
 import { shiftThaiDay, todayThai } from '../src/lib/date/thaiDay.ts'
+import { assertLocalDatabase } from '../src/lib/dev/localDatabase.ts'
+
+assertLocalDatabase(process.env.DATABASE_URI)
 
 const credentialsFile = process.argv[2]
 if (!credentialsFile) throw new Error('usage: tsx scripts/seed-z3b.mts <credentials-file>')

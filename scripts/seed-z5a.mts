@@ -1,12 +1,18 @@
 /**
  * Phase 5a test fixtures — an ISOLATED set, everything prefixed z5a-/Z5A-.
  *
- *   pnpm dlx tsx scripts/seed-z5a.mts <credentials-file>
+ *   pnpm dlx tsx scripts/seed-z5a.mts .local/z5a-credentials.json
+ *
+ * LOCAL DEV ONLY: refuses to run (before connecting) unless DATABASE_URI points at a
+ * local Postgres and NODE_ENV is not production — see src/lib/dev/localDatabase.ts.
+ * Write the credentials file under .local/ (gitignored) or outside the repo.
  *
  * Creates one user per role (z5a-admin, z5a-advisor-a, z5a-advisor-b, z5a-discipline)
  * and two classrooms in the active academic year, Z5A-1/1 (advisor A) and Z5A-1/2
  * (advisor B), which the synthetic DLA fixture's sheets d1-1 / d1-2 resolve to.
- * Students come from importing that fixture. Passwords go only to <credentials-file>.
+ * Students come from importing that fixture. Passwords go only to <credentials-file>,
+ * as a JSON object { "<email>": "<password>", ... }. To issue fresh passwords later,
+ * use scripts/rotate-fixture-passwords.mts.
  * Aborts if any Z5A classroom already exists. Never touches other data.
  *
  * Cleanup: delete the z-prefixed students (and their student-photos + files), the
@@ -16,6 +22,10 @@ import 'dotenv/config'
 
 import { randomBytes } from 'node:crypto'
 import { writeFile } from 'node:fs/promises'
+
+import { assertLocalDatabase } from '../src/lib/dev/localDatabase.ts'
+
+assertLocalDatabase(process.env.DATABASE_URI)
 
 const credentialsFile = process.argv[2]
 if (!credentialsFile) throw new Error('usage: tsx scripts/seed-z5a.mts <credentials-file>')
