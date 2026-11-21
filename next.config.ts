@@ -15,13 +15,8 @@ const nextConfig: NextConfig = {
   },
   // pdfmake/pdfkit read their own data files with `fs`, so they must not be bundled.
   serverExternalPackages: ['pdfmake'],
-  images: {
-    localPatterns: [
-      {
-        pathname: '/api/media/file/**',
-      },
-    ],
-  },
+  // Don't advertise the framework (no `X-Powered-By: Next.js`).
+  poweredByHeader: false,
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {
       '.cjs': ['.cts', '.cjs'],

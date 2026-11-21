@@ -51,8 +51,13 @@ export default buildConfig({
     fallbackLanguage: 'th',
     supportedLanguages: { th, en },
   },
+  // No anonymous usage pings to payloadcms.com (server start / admin load).
+  telemetry: false,
   admin: {
     user: Users.slug,
+    // Built-in initials avatar: the default ('gravatar') makes every admin browser
+    // request gravatar.com with a hash of the user's email.
+    avatar: 'default',
     importMap: {
       baseDir: path.resolve(dirname),
     },
