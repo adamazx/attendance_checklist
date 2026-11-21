@@ -3,12 +3,12 @@
 /**
  * Bulk student-photo import (decision D5): files named by studentId.
  *
- * 1. Browser pre-check (photoStems.precheck): type, ≤ 4MB, duplicates, and 13-digit
+ * 1. Browser pre-check (photoStems.precheck): type, ≤ MAX_PHOTO_MB, duplicates, and 13-digit
  *    (national-ID-looking) names — those never leave the browser.
  * 2. Dry run: POST /api/students/photo-match with the eligible stems only (JSON, no bytes).
  * 3. On confirm: each file is its own request through Payload REST — POST
  *    /api/student-photos (new) or PATCH /api/student-photos/:id ("แทนรูปเดิม") — so the
- *    4MB cap, mime check, UUID rename, EXIF stripping and admin-only write all apply.
+ *    size cap, mime check, UUID rename, EXIF stripping and admin-only write all apply.
  *
  * Colors come from Payload theme CSS variables only.
  */
@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildPlan,
   isJunkFile,
+  MAX_PHOTO_MB,
   precheck,
   type EligibleFile,
   type MatchResult,
@@ -36,7 +37,7 @@ const fmtSize = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(
 
 const REJECT_TITLES: Record<RejectReason, string> = {
   duplicate: 'ชื่อไฟล์ซ้ำ (ข้ามทุกไฟล์ที่ชื่อซ้ำกัน)',
-  tooLarge: 'ไฟล์ใหญ่เกิน 4MB (ข้าม)',
+  tooLarge: `ไฟล์ใหญ่เกิน ${MAX_PHOTO_MB}MB (ข้าม)`,
   wrongType: 'ชนิดไฟล์ไม่รองรับ (รับเฉพาะ JPG/PNG)',
   emptyStem: 'ชื่อไฟล์ว่าง (ข้าม)',
   nationalId: 'ชื่อไฟล์เป็นเลข 13 หลัก — คล้ายเลขประจำตัวประชาชน ไม่ส่งไปเซิร์ฟเวอร์ (ให้ตั้งชื่อเป็นเลขประจำตัวนักเรียน)',
@@ -186,7 +187,7 @@ export const PhotoImportPanel: React.FC = () => {
     <div>
       <p style={{ color: 'var(--theme-elevation-600)' }}>
         ตั้งชื่อไฟล์รูปเป็น <strong>เลขประจำตัวนักเรียน</strong> เช่น <code>10001.jpg</code> (ห้ามใช้เลขประจำตัวประชาชน) รับเฉพาะ
-        JPG/PNG ขนาดไม่เกิน 4MB ต่อไฟล์ ระบบจะตรวจสอบก่อนเสมอ และจะยังไม่อัปโหลดจนกว่าจะกดยืนยัน
+        JPG/PNG ขนาดไม่เกิน {MAX_PHOTO_MB}MB ต่อไฟล์ ระบบจะตรวจสอบก่อนเสมอ และจะยังไม่อัปโหลดจนกว่าจะกดยืนยัน
       </p>
 
       <div style={cardStyle}>
