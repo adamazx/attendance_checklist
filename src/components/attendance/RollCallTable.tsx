@@ -4,8 +4,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useMemo, useState } from 'react'
 
+import { ATTENDANCE_NOTE_HINT } from '@/lib/attendance/noteHint'
 import type { RollCallRow } from '@/lib/attendance/rollCall'
 import { ATTENDANCE_STATUSES, type AttendanceStatus } from '@/lib/attendance/statuses'
+
+/** One hint above the list, referenced by every note input (aria-describedby). */
+const NOTE_HINT_ID = 'attendance-note-hint'
 
 type Row = Pick<RollCallRow, 'note' | 'status'>
 type Message = { expired?: boolean; ok: boolean; text: string }
@@ -119,6 +123,10 @@ export function RollCallTable(props: {
         </button>
       </div>
 
+      <p className="mb-2 text-sm text-muted" id={NOTE_HINT_ID}>
+        {ATTENDANCE_NOTE_HINT}
+      </p>
+
       <ul className="overflow-hidden rounded-xl border-t-3 border-brand-gold bg-surface shadow-card">
         {rows.map((row) => {
           const value = values[row.studentId]
@@ -151,6 +159,7 @@ export function RollCallTable(props: {
                   ))}
                 </div>
                 <input
+                  aria-describedby={NOTE_HINT_ID}
                   aria-label={`หมายเหตุของ ${row.name}`}
                   className="min-h-10 w-full rounded-lg border border-line px-3 text-sm md:col-span-2"
                   maxLength={500}

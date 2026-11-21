@@ -2,6 +2,7 @@ import type { CollectionConfig, FieldAccess, TextFieldSingleValidation } from 'p
 
 import { attendanceCreate, attendanceModify, attendanceRead } from '@/access'
 import { ATTENDANCE_DAY_MESSAGES, checkAttendanceDay } from '@/lib/attendance/dateRules'
+import { ATTENDANCE_NOTE_HINT } from '@/lib/attendance/noteHint'
 import { THAI_DAY_RE, todayThai } from '@/lib/date/thaiDay'
 
 import {
@@ -111,6 +112,7 @@ export const AttendanceRecord: CollectionConfig = {
       name: 'note',
       type: 'textarea',
       label: 'หมายเหตุ/เหตุผล',
+      admin: { description: ATTENDANCE_NOTE_HINT },
     },
     {
       name: 'classroom',
