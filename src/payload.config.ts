@@ -62,6 +62,10 @@ export default buildConfig({
       // Admin-only custom view for the student-roster importer (phase-1b).
       afterNavLinks: ['/components/ImportStudents/ImportStudentsNavLink#default'],
       views: {
+        // Replaces the built-in password-reset form (no email in this app).
+        forgot: {
+          Component: '/components/ForgotPassword/ForgotPasswordView#default',
+        },
         importStudents: {
           Component: '/components/ImportStudents/ImportStudentsView#default',
           path: '/import-students',

@@ -1,8 +1,24 @@
-import type { Access, CollectionBeforeValidateHook, CollectionConfig } from 'payload'
+import type { Access, CollectionBeforeValidateHook, CollectionConfig, Endpoint } from 'payload'
 
 import { Forbidden } from 'payload'
 
 import { adminFieldAccess, adminOnly, isAdmin, isAdminOrDiscipline } from '@/access'
+import { PASSWORD_RESET_HELP } from '@/lib/auth/passwordReset'
+
+/**
+ * Replaces Payload's POST /api/users/forgot-password. The app has no email adapter,
+ * so the built-in flow could never deliver a reset link; it only wrote the
+ * recipient's email address to the server log (console email adapter). Payload
+ * matches a collection's own endpoints before its built-in ones (sanitize pushes
+ * the defaults after `endpoints`), so this handler wins. Same answer for every
+ * request: no token is created, nothing is logged, and it does not reveal whether
+ * an account exists. Admins reset passwords in /admin → ชื่อผู้ใช้.
+ */
+const forgotPasswordDisabled: Endpoint = {
+  path: '/forgot-password',
+  method: 'post',
+  handler: () => Response.json({ message: PASSWORD_RESET_HELP }, { status: 403 }),
+}
 
 /**
  * Read scoping for users:
@@ -55,7 +71,19 @@ export const Users: CollectionConfig = {
     defaultColumns: ['fullName', 'email', 'role'],
     group: 'ข้อมูลหลัก',
   },
-  auth: true,
+  auth: {
+    // Cookie flags only; no `domain` → host-only cookie. `secure` is off in dev so
+    // login still works over http://localhost.
+    cookies: { secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' },
+    // Per-account lockout (Payload has no per-IP limit; that is fail2ban's job on
+    // the proxy). 5 failures → locked for 15 minutes.
+    maxLoginAttempts: 5,
+    lockTime: 15 * 60 * 1000,
+    // One school day (8 h). The teacher UI never refreshes the token, so this is
+    // a hard limit on how long a login lasts.
+    tokenExpiration: 8 * 60 * 60,
+  },
+  endpoints: [forgotPasswordDisabled],
   access: {
     read: usersRead,
     create: adminOnly,
