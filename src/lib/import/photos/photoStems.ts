@@ -9,8 +9,13 @@
  * No path aliases here so `node --test --experimental-strip-types` can load it.
  */
 
-/** Same cap as payload.config.ts `upload.limits.fileSize` (below Vercel's 4.5 MB body limit). */
-export const MAX_PHOTO_BYTES = 4 * 1024 * 1024
+/**
+ * Student-photo size cap — the single source. payload.config.ts uses it for
+ * `upload.limits.fileSize` (server-side 413) and `precheck` below uses it in the
+ * browser; UI and admin texts are built from MAX_PHOTO_MB.
+ */
+export const MAX_PHOTO_MB = 10
+export const MAX_PHOTO_BYTES = MAX_PHOTO_MB * 1024 * 1024
 export const ACCEPTED_EXT: readonly string[] = ['jpg', 'jpeg', 'png']
 
 export const MATCH_LIMITS = {

@@ -25,9 +25,19 @@ const pageRenderHeaders = async (): Promise<Headers> => {
   return incoming
 }
 
+/**
+ * Order matters: `headers()` must run BEFORE `getPayload()`. Reading request headers
+ * is what tells Next a route is dynamic; if `getPayload()` ran first, `next build`
+ * would try to prerender the page and open a DB connection at build time (the image
+ * could then not be built without a database).
+ *
+ * Rule for new pages/routes: call `requireUser()` / `getCurrentUser()` (or
+ * `await connection()` from 'next/server') before any other `getPayload()` use.
+ */
 export const getCurrentUser = cache(async () => {
+  const requestHeaders = await pageRenderHeaders()
   const payload = await getPayload({ config })
-  const { user } = await payload.auth({ headers: await pageRenderHeaders() })
+  const { user } = await payload.auth({ headers: requestHeaders })
   return user
 })
 

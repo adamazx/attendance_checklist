@@ -373,7 +373,7 @@ export interface Student {
   createdAt: string;
 }
 /**
- * รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 4MB)
+ * รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 10MB)
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "student-photos".
@@ -427,6 +427,9 @@ export interface AttendanceRecord {
    * ลาออก = สิ้นสภาพนักศึกษา (บันทึกรายวันเท่านั้น ไม่เปลี่ยนสถานะนักเรียน)
    */
   status: 'present' | 'late' | 'leave' | 'absent' | 'resigned';
+  /**
+   * หมายเหตุ: ระบุเหตุผลสั้น ๆ ไม่ต้องระบุรายละเอียดอาการป่วย
+   */
   note?: string | null;
   /**
    * บันทึกอัตโนมัติจากห้องของนักเรียน ณ เวลาที่เช็คชื่อ

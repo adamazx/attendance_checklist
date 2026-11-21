@@ -19,6 +19,7 @@ import { Student } from './collections/Student'
 import { StudentPhotos } from './collections/StudentPhotos'
 import { Term } from './collections/Term'
 import { Users } from './collections/Users'
+import { MAX_PHOTO_BYTES, MAX_PHOTO_MB } from './lib/import/photos/photoStems'
 import { readS3Env } from './lib/storage/s3Env'
 
 const filename = fileURLToPath(import.meta.url)
@@ -51,8 +52,13 @@ export default buildConfig({
     fallbackLanguage: 'th',
     supportedLanguages: { th, en },
   },
+  // No anonymous usage pings to payloadcms.com (server start / admin load).
+  telemetry: false,
   admin: {
     user: Users.slug,
+    // Built-in initials avatar: the default ('gravatar') makes every admin browser
+    // request gravatar.com with a hash of the user's email.
+    avatar: 'default',
     importMap: {
       baseDir: path.resolve(dirname),
     },
@@ -62,6 +68,10 @@ export default buildConfig({
       // Admin-only custom view for the student-roster importer (phase-1b).
       afterNavLinks: ['/components/ImportStudents/ImportStudentsNavLink#default'],
       views: {
+        // Replaces the built-in password-reset form (no email in this app).
+        forgot: {
+          Component: '/components/ForgotPassword/ForgotPasswordView#default',
+        },
         importStudents: {
           Component: '/components/ImportStudents/ImportStudentsView#default',
           path: '/import-students',
@@ -74,12 +84,14 @@ export default buildConfig({
   // Activity is the optional subject/activity an attendance record is taken under.
   // StudentPhotos: one photo per student (local disk in dev; prod needs a storage adapter).
   collections: [Users, AcademicYear, Term, Activity, Classroom, Student, StudentPhotos, AttendanceRecord, AuditLog],
-  // Uploads are student photos only; cap their size below Vercel's 4.5 MB request-body
-  // limit. Enforced on HTTP multipart uploads only (413) — Local API uploads (e.g. a
-  // future bulk photo import) must check the size themselves.
+  // Uploads are student photos only; the cap (MAX_PHOTO_BYTES) is shared with the
+  // browser pre-check in photoStems.ts. Payload buffers the whole upload in memory
+  // and sharp decodes it, so the container's memory limit must allow for it.
+  // Enforced on HTTP multipart uploads only (413) — Local API uploads must check the
+  // size themselves. The reverse proxy's body limit must be at least this.
   upload: {
-    limits: { fileSize: 4 * 1024 * 1024 },
-    responseOnLimit: 'ไฟล์รูปใหญ่เกินไป — รูปนักเรียนต้องมีขนาดไม่เกิน 4MB',
+    limits: { fileSize: MAX_PHOTO_BYTES },
+    responseOnLimit: `ไฟล์รูปใหญ่เกินไป — รูปนักเรียนต้องมีขนาดไม่เกิน ${MAX_PHOTO_MB}MB`,
   },
   // The app uses REST and the Local API only. GraphQL also can't build its schema:
   // the Thai Student.prefix option values aren't valid GraphQL enum names.

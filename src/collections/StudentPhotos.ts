@@ -25,7 +25,8 @@
  * — never national ID; 13-digit stems are refused in the browser and never sent.
  * Dry run: POST /api/students/photo-match gets the stems only (no image bytes).
  * Then each file is its own REST request (POST, or PATCH to replace), so every
- * photo still passes the 4MB cap, mime check, UUID rename and admin-only write.
+ * photo still passes the size cap (MAX_PHOTO_BYTES), mime check, UUID rename and
+ * admin-only write.
  */
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
@@ -39,6 +40,7 @@ import type {
 } from 'payload'
 
 import { adminOnly, advisorClassroomIds, isAdminOrDiscipline } from '@/access'
+import { MAX_PHOTO_MB } from '@/lib/import/photos/photoStems'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -70,7 +72,7 @@ export const StudentPhotos: CollectionConfig = {
   admin: {
     group: 'ข้อมูลหลัก',
     defaultColumns: ['filename', 'student', 'updatedAt'],
-    description: 'รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน 4MB)',
+    description: `รูปนักเรียน 1 รูปต่อ 1 คน (JPG/PNG ไม่เกิน ${MAX_PHOTO_MB}MB)`,
   },
   access: {
     read: photoRead,

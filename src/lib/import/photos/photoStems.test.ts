@@ -5,6 +5,7 @@ import { test } from 'node:test'
 import {
   MATCH_LIMITS,
   MAX_PHOTO_BYTES,
+  MAX_PHOTO_MB,
   buildPlan,
   isJunkFile,
   looksLikeNationalId,
@@ -13,6 +14,15 @@ import {
   validateStems,
   type MatchResult,
 } from './photoStems.ts'
+
+test('photo size cap: 10 MB, bytes derived from the MB value shown in the UI', () => {
+  assert.equal(MAX_PHOTO_MB, 10)
+  assert.equal(MAX_PHOTO_BYTES, 10 * 1024 * 1024)
+  // A 6 MB phone photo (old 4 MB cap would refuse it) now passes the pre-check.
+  const { eligible, rejected } = precheck([{ name: '10001.jpg', size: 6 * 1024 * 1024 }])
+  assert.equal(eligible.length, 1)
+  assert.equal(rejected.length, 0)
+})
 
 test('splitName: last dot, trimmed stem, lowercased ext', () => {
   assert.deepEqual(splitName('A.B.jpg'), { stem: 'A.B', ext: 'jpg' })
