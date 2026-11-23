@@ -1,0 +1,94 @@
+# Production stack for the VPS. NOT for local dev (that is docker-compose.yml).
+#
+# Always run with the real env file, both for interpolation and for the containers:
+#   C="docker compose -f docker-compose.prod.yml --env-file deploy/.env.production"
+#   $C build && $C run --rm -T migrate && $C up -d
+# See deploy/README.md.
+name: mtyk
+
+x-app-env: &app-env
+  env_file:
+    - path: deploy/.env.production
+      required: true
+  environment:
+    # Hex password (openssl rand -hex 24) → no URL-encoding needed here.
+    DATABASE_URI: postgres://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
+    # Also inlined at build; payload.config.ts reads it at runtime too (migrate CLI).
+    NEXT_PUBLIC_SERVER_URL: https://${APP_DOMAIN:?APP_DOMAIN is required}
+
+services:
+  postgres:
+    # postgres 16.16 (same major as dev)
+    image: postgres:16-alpine@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+    # No ports: reachable only from the app/migrate containers.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      target: runner
+      args:
+        NEXT_PUBLIC_SERVER_URL: https://${APP_DOMAIN:?APP_DOMAIN is required}
+    image: mtyk-app:latest
+    restart: unless-stopped
+    <<: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Loopback only: Caddy (host network) is the only way in from outside.
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - media:/app/media
+    mem_limit: 1536m
+    # healthcheck: defined in the image (GET /api/health)
+
+  # One-off: `$C run --rm -T migrate`. The profile keeps `up -d` from ever running it.
+  migrate:
+    profiles: ["migrate"]
+    build:
+      context: .
+      target: migrate
+    image: mtyk-migrate:latest
+    restart: "no"
+    <<: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  caddy:
+    # caddy 2.11.9
+    image: caddy:2@sha256:4851e54a46b206517c574821bb5cc67f170d2156041e9fbc4c9193b45e84a75b
+    restart: unless-stopped
+    # Host networking: host fail2ban/nftables bans apply (published ports would bypass
+    # the INPUT chain) and Caddy sees real client IPs. Binds 80/443 on the host.
+    network_mode: host
+    depends_on:
+      - app
+    # Only what the Caddyfile needs — no DB/Payload secrets in this container.
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      # Access log on the host so host fail2ban can read it.
+      - /var/log/caddy:/var/log/caddy
+
+volumes:
+  pgdata:
+  media:
+  caddy_data:
+  caddy_config:
