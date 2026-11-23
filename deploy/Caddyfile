@@ -1,0 +1,49 @@
+# Reverse proxy + TLS for the app. Runs with network_mode: host (see docker-compose.prod.yml).
+# APP_DOMAIN and ACME_EMAIL come from deploy/.env.production via compose.
+{
+	email {$ACME_EMAIL}
+
+	# Enable for the first trial deploys on the VPS (avoids Let's Encrypt rate limits);
+	# remove it to get the real certificate.
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+	servers {
+		# UDP/443 is closed in the hPanel firewall → no HTTP/3.
+		protocols h1 h2
+	}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# Must be >= the app's 10 MB photo cap plus multipart overhead.
+	request_body {
+		max_size 15MB
+	}
+
+	# APP_UPSTREAM is only overridden by local tests; production uses the default.
+	reverse_proxy {$APP_UPSTREAM:127.0.0.1:3000}
+
+	header {
+		# Short max-age while testing. Raise to max-age=31536000 after go-live.
+		# No includeSubDomains / preload: this is a subdomain of the school's domain.
+		Strict-Transport-Security "max-age=86400"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Content-Security-Policy "frame-ancestors 'none'"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+		-Via
+	}
+
+	# JSON access log for host fail2ban. URLs carry student/classroom IDs, so keep
+	# retention short (~7 files / 7 days).
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 20MiB
+			roll_keep 7
+			roll_keep_for 168h
+		}
+		format json
+	}
+}

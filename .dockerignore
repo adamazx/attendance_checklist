@@ -1,0 +1,41 @@
+# Keep the build context minimal. Real student data and secrets must NEVER
+# enter it (they could end up in an image layer).
+
+# Secrets / env files (real env lives on the host only)
+.env*
+**/.env*
+
+# Real student data exports (e.g. card.xls) — never in an image
+card.xls
+*.xls
+*.xlsx
+**/*.xls
+**/*.xlsx
+*.csv
+**/*.csv
+
+# Local data / build output / deps
+media
+.local
+.next
+node_modules
+**/node_modules
+coverage
+*.log
+*.tsbuildinfo
+next-env.d.ts
+
+# Repo-only material not needed to build or migrate
+.git
+.gitattributes
+.claude
+.mcp.json
+docs
+scripts
+deploy
+docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+CLAUDE*.md
+AGENTS.md

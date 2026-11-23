@@ -9,6 +9,8 @@ const dirname = path.dirname(__filename)
 const nextConfig: NextConfig = {
   // Don't let `next dev` inject its agent-rules block into our committed AGENTS.md.
   agentRules: false,
+  // Self-contained server (.next/standalone/server.js) for the production Docker image.
+  output: 'standalone',
   // Report PDFs embed the vendored Sarabun TTFs, read from disk at request time.
   outputFileTracingIncludes: {
     '/api/reports/**': ['./assets/fonts/sarabun/**'],

@@ -5,6 +5,10 @@ docs/
 CLAUDE.local.md
 .env
 .env.local
+# Production env (deploy/.env.production) lives on the VPS only.
+.env.production
+.env.production.*
+!.env.production.example
 
 # Python cache
 __pycache__/
