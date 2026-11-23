@@ -1,0 +1,20 @@
+# EXAMPLE — install on the VPS host as /etc/fail2ban/jail.d/caddy-payload-login.local
+#
+# The whole school very likely reaches the app through ONE shared public IP (NAT),
+# so a ban here can lock out every teacher at once. That is why the threshold is
+# high and the ban short ON PURPOSE. Per-account brute force is already stopped by
+# Payload itself (5 failed attempts → account locked for 15 minutes).
+# Once known, put the school's public IP in ignoreip.
+
+[caddy-payload-login]
+enabled   = true
+filter    = caddy-payload-login
+logpath   = /var/log/caddy/access.log
+backend   = auto
+port      = http,https
+banaction = nftables[type=multiport]
+maxretry  = 20
+findtime  = 10m
+bantime   = 10m
+# Add the school's public IP once known, e.g.:  ignoreip = 127.0.0.1/8 ::1 203.0.113.10
+ignoreip  = 127.0.0.1/8 ::1
